@@ -11,18 +11,18 @@ import afterImg from "@/assets/after.jpg";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Лакки — Lucky Grooming Salon | Professional Dog Grooming" },
-      { name: "description", content: "Boutique dog grooming salon Лакки: gentle care, professional haircuts, bath & blow dry and more. Book an appointment today." },
-      { property: "og:title", content: "Лакки — Lucky Grooming Salon" },
-      { property: "og:description", content: "Gentle care, professional grooming, and a little extra love for every dog." },
+      { title: "Лакки — салон груминга для собак" },
+      { name: "description", content: "Бутик-салон груминга «Лакки»: бережный уход, профессиональные стрижки, купание и сушка. Запишитесь на приём сегодня." },
+      { property: "og:title", content: "Лакки — салон груминга для собак" },
+      { property: "og:description", content: "Бережный уход, профессиональный груминг и немного больше любви для каждой собаки." },
     ],
   }),
   component: Index,
 });
 
 const NAV = [
-  ["Home", "#home"], ["Services", "#services"], ["About Us", "#about"],
-  ["Gallery", "#gallery"], ["Reviews", "#reviews"], ["Contacts", "#contacts"],
+  ["Главная", "#home"], ["Услуги", "#services"], ["О нас", "#about"],
+  ["Галерея", "#gallery"], ["Отзывы", "#reviews"], ["Контакты", "#contacts"],
 ] as const;
 
 function Paw({ className = "" }: { className?: string }) {
@@ -50,24 +50,24 @@ const ICONS = {
 };
 
 const SERVICES = [
-  { k: "full", t: "Full Grooming", d: "Complete care: bath, haircut, nails, ears and finishing styling.", p: "from 3 500 ₽" },
-  { k: "bath", t: "Bath & Blow Dry", d: "Gentle shampoo, conditioning mask and a soft, fluffy blow dry.", p: "from 1 800 ₽" },
-  { k: "cut", t: "Haircut & Styling", d: "Breed-standard or creative cuts, shaped with precision.", p: "from 2 500 ₽" },
-  { k: "nail", t: "Nail Trimming", d: "Careful clipping and filing for comfortable, healthy paws.", p: "from 500 ₽" },
-  { k: "ear", t: "Ear Cleaning", d: "Hygienic, delicate ear care to keep them clean and calm.", p: "from 400 ₽" },
-  { k: "coat", t: "Paw & Coat Care", d: "Paw balm, detangling and nourishing coat treatments.", p: "from 900 ₽" },
+  { k: "full", t: "Комплексный груминг", d: "Полный уход: купание, стрижка, когти, уши и финальный стайлинг.", p: "от 3 500 ₽" },
+  { k: "bath", t: "Купание и сушка", d: "Мягкий шампунь, кондиционирующая маска и нежная пушистая сушка.", p: "от 1 800 ₽" },
+  { k: "cut", t: "Стрижка и стайлинг", d: "Стрижки по стандарту породы или креативные — с ювелирной точностью.", p: "от 2 500 ₽" },
+  { k: "nail", t: "Стрижка когтей", d: "Аккуратная обрезка и полировка для здоровых и удобных лапок.", p: "от 500 ₽" },
+  { k: "ear", t: "Чистка ушей", d: "Гигиеничный и деликатный уход за ушами — чисто и спокойно.", p: "от 400 ₽" },
+  { k: "coat", t: "Уход за лапами и шерстью", d: "Бальзам для лап, распутывание колтунов и питательные маски для шерсти.", p: "от 900 ₽" },
 ] as const;
 
 const ADVANTAGES = [
-  "Professional groomers", "Individual approach", "High-quality grooming products",
-  "Clean and comfortable salon", "Stress-conscious handling", "Dogs of all breeds and sizes",
+  "Профессиональные грумеры", "Индивидуальный подход", "Качественная косметика",
+  "Чистый и уютный салон", "Бережное обращение без стресса", "Собаки всех пород и размеров",
 ];
 
 const REVIEWS = [
-  { n: "Anna", dog: "Bonya, French Bulldog", t: "Bonya came home calm, soft and smelling wonderful. The team is so gentle — we won't go anywhere else." },
-  { n: "Mikhail", dog: "Archie, Poodle", t: "A perfect teddy cut, exactly as I asked. You can feel the love for animals in every detail." },
-  { n: "Elena", dog: "Lucy, Maltese", t: "Lucy is usually nervous, but here she felt at home. Beautiful salon and real professionals." },
-  { n: "Dmitry", dog: "Rocky, Spitz", t: "Fast booking, friendly staff and an amazing result. Rocky looks like a show dog now!" },
+  { n: "Анна", dog: "Боня, французский бульдог", t: "Боня вернулась домой спокойной, мягкой и чудесно пахнущей. Команда такая бережная — теперь только к вам." },
+  { n: "Михаил", dog: "Арчи, пудель", t: "Идеальная стрижка «под мишку», ровно как я просил. В каждой детали чувствуется любовь к животным." },
+  { n: "Елена", dog: "Люси, мальтийская болонка", t: "Люси обычно нервничает, но здесь она чувствовала себя как дома. Красивый салон и настоящие профессионалы." },
+  { n: "Дмитрий", dog: "Рокки, шпиц", t: "Быстрая запись, дружелюбный персонал и потрясающий результат. Рокки теперь как выставочная собака!" },
 ];
 
 function useReveal() {
@@ -98,16 +98,16 @@ function Header() {
     <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ${scrolled ? "border-b border-line bg-background/85 backdrop-blur-md" : ""}`}>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
         <a href="#home" className="flex items-center gap-3">
-          <img src={logo} alt="Лакки logo" width={48} height={48} className="h-12 w-12 rounded-full" />
+          <img src={logo} alt="Логотип Лакки" width={48} height={48} className="h-12 w-12 rounded-full" />
           <span className="font-script text-3xl text-glow">Лакки</span>
         </a>
         <nav className="hidden items-center gap-8 lg:flex">
           {NAV.map(([l, h]) => (
             <a key={h} href={h} className="text-xs uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground">{l}</a>
           ))}
-          <a href="#booking" className="btn-outline !py-2.5">Book Now</a>
+          <a href="#booking" className="btn-outline !py-2.5">Записаться</a>
         </nav>
-        <button className="lg:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
+        <button className="lg:hidden" aria-label="Меню" onClick={() => setOpen(!open)}>
           <div className="space-y-1.5"><span className="block h-px w-7 bg-foreground" /><span className="block h-px w-7 bg-foreground" /><span className="block h-px w-5 bg-foreground" /></div>
         </button>
       </div>
@@ -116,7 +116,7 @@ function Header() {
           {NAV.map(([l, h]) => (
             <a key={h} href={h} onClick={() => setOpen(false)} className="text-sm uppercase tracking-[0.2em]">{l}</a>
           ))}
-          <a href="#booking" onClick={() => setOpen(false)} className="btn-outline">Book Now</a>
+          <a href="#booking" onClick={() => setOpen(false)} className="btn-outline">Записаться</a>
         </nav>
       )}
     </header>
@@ -126,7 +126,7 @@ function Header() {
 function Hero() {
   return (
     <section id="home" className="relative flex min-h-screen items-center overflow-hidden">
-      <img src={heroDog} alt="Well-groomed French Bulldog" width={1600} height={1008} className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-70 md:opacity-100" />
+      <img src={heroDog} alt="Ухоженный французский бульдог" width={1600} height={1008} className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-70 md:opacity-100" />
       <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
       <div className="spin-slow pointer-events-none absolute -left-40 top-1/2 h-[560px] w-[560px] -translate-y-1/2 rounded-full border border-line" />
@@ -135,20 +135,20 @@ function Hero() {
       <Paw className="floaty absolute bottom-[16%] left-[46%] h-7 w-7 text-foreground/20 [--r:-15deg] [animation-delay:2s]" />
       <div className="relative mx-auto w-full max-w-7xl px-5 pt-24 md:px-8">
         <div className="max-w-2xl reveal">
-          <Eyebrow>Lucky Grooming Salon</Eyebrow>
+          <Eyebrow>салон груминга «Лакки»</Eyebrow>
           <h1 className="mt-4 text-5xl font-semibold leading-[1.02] sm:text-6xl lg:text-8xl">
-            Professional Grooming for Your <em className="text-glow">Best Friend</em>
+            Профессиональный груминг для вашего <em className="text-glow">лучшего друга</em>
           </h1>
           <p className="mt-6 max-w-md text-lg text-muted-foreground">
-            Gentle care, professional grooming, and a little extra love for every dog.
+            Бережный уход, профессиональный груминг и немного больше любви для каждой собаки.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
-            <a href="#booking" className="btn-solid">Book an Appointment</a>
-            <a href="#services" className="btn-outline">View Services</a>
+            <a href="#booking" className="btn-solid">Записаться на приём</a>
+            <a href="#services" className="btn-outline">Наши услуги</a>
           </div>
         </div>
       </div>
-      <a href="#services" className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.4em] text-muted-foreground">Scroll</a>
+      <a href="#services" className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.4em] text-muted-foreground">Листайте вниз</a>
     </section>
   );
 }
@@ -168,7 +168,7 @@ function SectionTitle({ eyebrow, title, center = true }: { eyebrow: string; titl
 function Services() {
   return (
     <section id="services" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
-      <SectionTitle eyebrow="what we do" title="Our Grooming Services" />
+      <SectionTitle eyebrow="что мы делаем" title="Наши услуги" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {SERVICES.map((s, i) => (
           <article key={s.t} style={{ transitionDelay: `${i * 70}ms` }} className="reveal card-line group flex flex-col p-8 hover:-translate-y-2 hover:border-foreground hover:shadow-glow">
@@ -177,7 +177,7 @@ function Services() {
             <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
             <div className="mt-8 flex items-center justify-between border-t border-line pt-5">
               <span className="font-display text-xl">{s.p}</span>
-              <a href="#booking" className="text-xs uppercase tracking-[0.2em] underline-offset-8 group-hover:underline">Book Now →</a>
+              <a href="#booking" className="text-xs uppercase tracking-[0.2em] underline-offset-8 group-hover:underline">Записаться →</a>
             </div>
           </article>
         ))}
@@ -192,16 +192,16 @@ function About() {
       <div className="mx-auto grid max-w-7xl items-center gap-16 px-5 md:px-8 lg:grid-cols-2">
         <div className="reveal relative">
           <div className="absolute -inset-4 rounded-[2rem] border border-line" />
-          <img src={aboutImg} alt="Groomer brushing a white Maltese" loading="lazy" width={1008} height={1200} className="relative aspect-[4/5] w-full rounded-[1.5rem] object-cover" />
+          <img src={aboutImg} alt="Грумер расчёсывает белую мальтийскую болонку" loading="lazy" width={1008} height={1200} className="relative aspect-[4/5] w-full rounded-[1.5rem] object-cover" />
           <div className="absolute -bottom-6 -right-4 rounded-full border border-foreground bg-background px-6 py-4 shadow-glow md:-right-8">
-            <span className="font-script text-2xl">with love</span>
+            <span className="font-script text-2xl">с любовью</span>
           </div>
         </div>
         <div>
-          <SectionTitle eyebrow="about the salon" title="Care You Can Trust" center={false} />
+          <SectionTitle eyebrow="о салоне" title="Забота, которой можно доверять" center={false} />
           <p className="reveal text-lg leading-relaxed text-muted-foreground">
-            Lucky Grooming Salon is a boutique space where every dog receives professional, gentle and individual care.
-            We take time to get to know each guest, choose products for their coat and skin, and work calmly so every visit feels safe.
+            «Лакки» — бутик-салон, где каждая собака получает профессиональный, бережный и индивидуальный уход.
+            Мы знакомимся с каждым гостем, подбираем косметику под его шерсть и кожу и работаем спокойно, чтобы каждый визит был комфортным.
           </p>
           <ul className="mt-10 grid gap-4 sm:grid-cols-2">
             {ADVANTAGES.map((a) => (
@@ -220,24 +220,24 @@ function BeforeAfter() {
   const [pos, setPos] = useState(50);
   return (
     <section id="gallery" className="mx-auto max-w-6xl px-5 py-28 md:px-8">
-      <SectionTitle eyebrow="transformations" title="Before & After" />
+      <SectionTitle eyebrow="преображения" title="До и после" />
       <div className="reveal relative aspect-[5/4] w-full select-none overflow-hidden rounded-[2rem] border border-border shadow-glow md:aspect-[16/10]">
-        <img src={afterImg} alt="Dog after grooming" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-        <img src={beforeImg} alt="Dog before grooming" loading="lazy" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={afterImg} alt="Собака после груминга" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={beforeImg} alt="Собака до груминга" loading="lazy" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} className="absolute inset-0 h-full w-full object-cover" />
         <div className="pointer-events-none absolute inset-y-0 w-px bg-foreground shadow-glow" style={{ left: `${pos}%` }}>
           <div className="absolute top-1/2 left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground bg-background text-sm">⟷</div>
         </div>
-        <span className="absolute left-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">Before</span>
-        <span className="absolute right-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">After</span>
-        <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(+e.target.value)} aria-label="Before and after slider" className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" />
+        <span className="absolute left-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">До</span>
+        <span className="absolute right-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">После</span>
+        <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(+e.target.value)} aria-label="Ползунок до и после" className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" />
       </div>
-      <div className="mt-10 text-center"><a href="#contacts" className="btn-outline">View Gallery</a></div>
+      <div className="mt-10 text-center"><a href="#contacts" className="btn-outline">Смотреть галерею</a></div>
     </section>
   );
 }
 
 function Why() {
-  const items = [["500+", "Happy Dogs"], ["8", "Years of Professional Care"], ["100%", "Premium Products"], ["∞", "Love in Every Detail"]];
+  const items = [["500+", "Счастливых собак"], ["8", "Лет профессиональной заботы"], ["100%", "Премиальная косметика"], ["∞", "Любви в каждой детали"]];
   return (
     <section className="relative overflow-hidden border-y border-line py-24">
       <Paw className="absolute -right-10 -top-10 h-64 w-64 text-foreground/5" />
@@ -263,19 +263,19 @@ function Reviews() {
   const r = REVIEWS[i]!;
   return (
     <section id="reviews" className="mx-auto max-w-4xl px-5 py-28 text-center md:px-8">
-      <SectionTitle eyebrow="kind words" title="What Our Clients Say" />
+      <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
       <div className="reveal card-line px-6 py-14 md:px-16">
         <div className="tracking-[0.4em] text-glow">★★★★★</div>
-        <p key={i} className="mt-8 animate-in fade-in duration-700 font-display text-2xl italic leading-snug md:text-4xl">“{r.t}”</p>
+        <p key={i} className="mt-8 animate-in fade-in duration-700 font-display text-2xl italic leading-snug md:text-4xl">«{r.t}»</p>
         <div className="mt-8 text-sm uppercase tracking-[0.25em]">{r.n}</div>
         <div className="mt-1 font-script text-2xl text-muted-foreground">{r.dog}</div>
       </div>
       <div className="mt-8 flex items-center justify-center gap-6">
-        <button aria-label="Previous review" onClick={() => setI((i - 1 + REVIEWS.length) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">←</button>
+        <button aria-label="Предыдущий отзыв" onClick={() => setI((i - 1 + REVIEWS.length) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">←</button>
         <div className="flex gap-2">
-          {REVIEWS.map((_, k) => <button key={k} aria-label={`Review ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? "w-8 bg-foreground" : "w-3 bg-border"}`} />)}
+          {REVIEWS.map((_, k) => <button key={k} aria-label={`Отзыв ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? "w-8 bg-foreground" : "w-3 bg-border"}`} />)}
         </div>
-        <button aria-label="Next review" onClick={() => setI((i + 1) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">→</button>
+        <button aria-label="Следующий отзыв" onClick={() => setI((i + 1) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">→</button>
       </div>
     </section>
   );
@@ -284,7 +284,7 @@ function Reviews() {
 function Booking() {
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    toast.success("Thank you! We'll call you shortly to confirm your appointment.");
+    toast.success("Спасибо! Мы скоро позвоним, чтобы подтвердить запись.");
     e.currentTarget.reset();
   };
   const L = ({ children }: { children: ReactNode }) => <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-muted-foreground">{children}</span>;
@@ -292,26 +292,26 @@ function Booking() {
     <section id="booking" className="border-y border-line py-28">
       <div className="mx-auto grid max-w-7xl gap-14 px-5 md:px-8 lg:grid-cols-[1fr_1.3fr]">
         <div className="reveal">
-          <Eyebrow>book a visit</Eyebrow>
-          <h2 className="mt-2 text-5xl font-semibold leading-tight md:text-6xl">Your Dog Deserves a <em className="text-glow">Fresh New Look</em></h2>
-          <p className="mt-6 max-w-sm text-muted-foreground">Leave a request and our administrator will contact you to confirm the time.</p>
+          <Eyebrow>запись на визит</Eyebrow>
+          <h2 className="mt-2 text-5xl font-semibold leading-tight md:text-6xl">Ваша собака заслуживает <em className="text-glow">нового образа</em></h2>
+          <p className="mt-6 max-w-sm text-muted-foreground">Оставьте заявку, и наш администратор свяжется с вами, чтобы подтвердить время.</p>
           <img src={logo} alt="" loading="lazy" className="mt-10 hidden h-48 w-48 rounded-full shadow-glow lg:block" />
         </div>
         <form onSubmit={onSubmit} className="reveal card-line grid gap-5 p-6 sm:grid-cols-2 md:p-10">
-          <label><L>Owner's name</L><input required className="field" placeholder="Anna" /></label>
-          <label><L>Phone number</L><input required type="tel" className="field" placeholder="+7 900 000-00-00" /></label>
-          <label><L>Dog's name</L><input required className="field" placeholder="Lucky" /></label>
-          <label><L>Breed</L><input className="field" placeholder="French Bulldog" /></label>
-          <label className="sm:col-span-2"><L>Service</L>
+          <label><L>Имя владельца</L><input required className="field" placeholder="Анна" /></label>
+          <label><L>Номер телефона</L><input required type="tel" className="field" placeholder="+7 900 000-00-00" /></label>
+          <label><L>Имя собаки</L><input required className="field" placeholder="Лакки" /></label>
+          <label><L>Порода</L><input className="field" placeholder="Французский бульдог" /></label>
+          <label className="sm:col-span-2"><L>Услуга</L>
             <select required className="field" defaultValue="">
-              <option value="" disabled className="bg-background">Choose a service</option>
+              <option value="" disabled className="bg-background">Выберите услугу</option>
               {SERVICES.map((s) => <option key={s.t} className="bg-background">{s.t}</option>)}
             </select>
           </label>
-          <label><L>Preferred date</L><input required type="date" className="field [color-scheme:dark]" /></label>
-          <label><L>Preferred time</L><input required type="time" className="field [color-scheme:dark]" /></label>
-          <label className="sm:col-span-2"><L>Additional notes</L><textarea rows={3} className="field" placeholder="Anything we should know about your dog" /></label>
-          <button type="submit" className="btn-solid sm:col-span-2">Book an Appointment</button>
+          <label><L>Желаемая дата</L><input required type="date" className="field [color-scheme:dark]" /></label>
+          <label><L>Желаемое время</L><input required type="time" className="field [color-scheme:dark]" /></label>
+          <label className="sm:col-span-2"><L>Дополнительные пожелания</L><textarea rows={3} className="field" placeholder="Что нам важно знать о вашей собаке" /></label>
+          <button type="submit" className="btn-solid sm:col-span-2">Записаться на приём</button>
         </form>
       </div>
     </section>
@@ -320,12 +320,12 @@ function Booking() {
 
 function Contacts() {
   const rows = [
-    ["Phone", "+7 (900) 123-45-67"], ["WhatsApp / Telegram", "@lucky_grooming"],
-    ["Address", "ul. Primernaya 10, Moscow"], ["Opening hours", "Daily 10:00 – 21:00"],
+    ["Телефон", "+7 (900) 123-45-67"], ["WhatsApp / Telegram", "@lucky_grooming"],
+    ["Адрес", "ул. Примерная, 10, Москва"], ["Часы работы", "Ежедневно 10:00 – 21:00"],
   ];
   return (
     <section id="contacts" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
-      <SectionTitle eyebrow="find us" title="Contacts" />
+      <SectionTitle eyebrow="как нас найти" title="Контакты" />
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="reveal card-line divide-y divide-[var(--line)] p-8">
           {rows.map(([k, v]) => (
@@ -339,7 +339,7 @@ function Contacts() {
           </div>
         </div>
         <div className="reveal relative min-h-[360px] overflow-hidden rounded-[1.5rem] border border-border">
-          <iframe title="Salon location map" className="absolute inset-0 h-full w-full grayscale invert-[.9] contrast-125" loading="lazy"
+          <iframe title="Карта расположения салона" className="absolute inset-0 h-full w-full grayscale invert-[.9] contrast-125" loading="lazy"
             src="https://www.openstreetmap.org/export/embed.html?bbox=37.58%2C55.74%2C37.66%2C55.77&layer=mapnik&marker=55.755%2C37.62" />
         </div>
       </div>
@@ -352,14 +352,14 @@ function Footer() {
     <footer className="border-t border-line py-16">
       <div className="mx-auto grid max-w-7xl gap-10 px-5 text-center md:grid-cols-3 md:items-center md:px-8 md:text-left">
         <div className="flex flex-col items-center gap-3 md:items-start">
-          <img src={logo} alt="Лакки logo" loading="lazy" className="h-28 w-28 rounded-full shadow-glow" />
+          <img src={logo} alt="Логотип Лакки" loading="lazy" className="h-28 w-28 rounded-full shadow-glow" />
         </div>
         <nav className="flex flex-wrap justify-center gap-x-6 gap-y-3">
           {NAV.map(([l, h]) => <a key={h} href={h} className="text-xs uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">{l}</a>)}
         </nav>
         <div className="text-sm text-muted-foreground md:text-right">
-          <p>+7 (900) 123-45-67</p><p>ul. Primernaya 10, Moscow</p>
-          <p className="mt-4 text-xs">© {new Date().getFullYear()} Лакки · Lucky Grooming Salon</p>
+          <p>+7 (900) 123-45-67</p><p>ул. Примерная, 10, Москва</p>
+          <p className="mt-4 text-xs">© {new Date().getFullYear()} Лакки · салон груминга</p>
         </div>
       </div>
     </footer>
