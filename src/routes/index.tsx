@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import logo from "@/assets/logo.png";
@@ -61,12 +61,15 @@ const ADVANTAGES = [
   "Чистый и уютный салон", "Бережное обращение без стресса", "Собаки всех пород и размеров",
 ];
 
+const YANDEX_REVIEWS_URL = "https://yandex.ru/maps/org/lakki/81119680356/reviews/";
+
 const REVIEWS = [
-  { n: "Анна", dog: "Боня, французский бульдог", t: "Боня вернулась домой спокойной, мягкой и чудесно пахнущей. Команда такая бережная — теперь только к вам." },
-  { n: "Михаил", dog: "Арчи, пудель", t: "Идеальная стрижка «под мишку», ровно как я просил. В каждой детали чувствуется любовь к животным." },
-  { n: "Елена", dog: "Люси, мальтийская болонка", t: "Люси обычно нервничает, но здесь она чувствовала себя как дома. Красивый салон и настоящие профессионалы." },
-  { n: "Дмитрий", dog: "Рокки, шпиц", t: "Быстрая запись, дружелюбный персонал и потрясающий результат. Рокки теперь как выставочная собака!" },
-];
+  { n: "Аксиния С.", date: "22 марта", t: "Наш Ричард преобразился благодаря золотым ручкам мастера Ксении." },
+  { n: "Диана Бармина", date: "2 июля 2025", t: "Сделали всё быстро, аккуратно и качественно. Теперь будем ходить только сюда." },
+  { n: "Екатерина Дмитриева", date: "26 мая 2025", t: "Девочки очень внимательные — наш первый опыт посещения груминга удался." },
+  { n: "Анна Сулима", date: "10 октября 2024", t: "Добрые и нежные грумеры. Собака даже не хотела уходить после процедуры." },
+  { n: "Мария Проценко", date: "2 ноября 2023", t: "Помыли, причесали и подстригли бишона со знанием дела. Придём ещё." },
+] as const;
 
 function useReveal() {
   useEffect(() => {
@@ -234,29 +237,45 @@ function Why() {
 }
 
 function Reviews() {
-  const [i, setI] = useState(0);
-  const timer = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    timer.current = window.setInterval(() => setI((x) => (x + 1) % REVIEWS.length), 6000);
-    return () => clearInterval(timer.current);
-  }, []);
-  const r = REVIEWS[i]!;
   return (
-    <section id="reviews" className="mx-auto max-w-4xl px-5 py-28 text-center md:px-8">
+    <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
-      <div className="reveal card-line px-6 py-14 md:px-16">
-        <div className="tracking-[0.4em] text-glow">★★★★★</div>
-        <p key={i} className="mt-8 animate-in fade-in duration-700 font-display text-2xl italic leading-snug md:text-4xl">«{r.t}»</p>
-        <div className="mt-8 text-sm uppercase tracking-[0.25em]">{r.n}</div>
-        <div className="mt-1 font-script text-2xl text-muted-foreground">{r.dog}</div>
-      </div>
-      <div className="mt-8 flex items-center justify-center gap-6">
-        <button aria-label="Предыдущий отзыв" onClick={() => setI((i - 1 + REVIEWS.length) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">←</button>
-        <div className="flex gap-2">
-          {REVIEWS.map((_, k) => <button key={k} aria-label={`Отзыв ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 rounded-full transition-all ${k === i ? "w-8 bg-foreground" : "w-3 bg-border"}`} />)}
+      <div className="reveal mb-8 flex flex-col items-center justify-between gap-5 rounded-[1.5rem] border border-border px-6 py-5 text-center sm:flex-row sm:text-left">
+        <div>
+          <div className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Яндекс Карты</div>
+          <div className="mt-2 flex items-center justify-center gap-3 sm:justify-start">
+            <span className="font-display text-4xl font-semibold">5,0</span>
+            <span className="tracking-[0.25em] text-glow">★★★★★</span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">75 оценок · 32 отзыва</p>
         </div>
-        <button aria-label="Следующий отзыв" onClick={() => setI((i + 1) % REVIEWS.length)} className="h-11 w-11 rounded-full border border-border transition hover:border-foreground hover:shadow-glow">→</button>
+        <a href={YANDEX_REVIEWS_URL} target="_blank" rel="noreferrer" className="btn-outline">Все отзывы на Яндекс Картах ↗</a>
       </div>
+      <div className="reveal card-line overflow-x-auto">
+        <table className="w-full min-w-[760px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-line text-xs uppercase tracking-[0.22em] text-muted-foreground">
+              <th className="px-6 py-5 font-medium">Автор</th>
+              <th className="px-6 py-5 font-medium">Дата</th>
+              <th className="px-6 py-5 font-medium">Отзыв</th>
+              <th className="px-6 py-5 text-right font-medium">Источник</th>
+            </tr>
+          </thead>
+          <tbody>
+            {REVIEWS.map((review) => (
+              <tr key={`${review.n}-${review.date}`} className="border-b border-line last:border-0">
+                <td className="whitespace-nowrap px-6 py-6 font-display text-xl">{review.n}</td>
+                <td className="whitespace-nowrap px-6 py-6 text-sm text-muted-foreground">{review.date}</td>
+                <td className="max-w-xl px-6 py-6 leading-relaxed">«{review.t}»</td>
+                <td className="whitespace-nowrap px-6 py-6 text-right">
+                  <a href={YANDEX_REVIEWS_URL} target="_blank" rel="noreferrer" className="text-xs uppercase tracking-[0.18em] underline-offset-8 hover:underline">Яндекс Карты ↗</a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-5 text-center text-xs text-muted-foreground">Короткие выдержки из отзывов посетителей. Полные тексты доступны на Яндекс Картах.</p>
     </section>
   );
 }
@@ -301,7 +320,7 @@ function Booking() {
 function Contacts() {
   const rows = [
     ["Телефон", "+7 (900) 123-45-67"], ["WhatsApp / Telegram", "@lucky_grooming"],
-    ["Адрес", "ул. Примерная, 10, Москва"], ["Часы работы", "Ежедневно 10:00 – 21:00"],
+    ["Адрес", "ул. Тазаева, 3, Колпино"], ["Часы работы", "Ежедневно 10:00 – 21:00"],
   ];
   return (
     <section id="contacts" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
@@ -318,9 +337,10 @@ function Contacts() {
             {["Instagram", "Telegram", "VK"].map((s) => <a key={s} href="#" className="btn-outline !px-5 !py-2 !text-[10px]">{s}</a>)}
           </div>
         </div>
-        <div className="reveal relative min-h-[360px] overflow-hidden rounded-[1.5rem] border border-border">
-          <iframe title="Карта расположения салона" className="absolute inset-0 h-full w-full grayscale invert-[.9] contrast-125" loading="lazy"
-            src="https://www.openstreetmap.org/export/embed.html?bbox=37.58%2C55.74%2C37.66%2C55.77&layer=mapnik&marker=55.755%2C37.62" />
+        <div className="reveal relative min-h-[420px] overflow-hidden rounded-[1.5rem] border border-border">
+          <iframe title="Лакки на Яндекс Картах" className="absolute inset-0 h-full w-full grayscale invert-[.9] contrast-125" loading="lazy" allowFullScreen
+            src="https://yandex.ru/map-widget/v1/?ll=30.608306%2C59.741463&z=17&pt=30.608306%2C59.741463%2Cpm2rdl" />
+          <a href="https://yandex.ru/maps/?ll=30.608306%2C59.741463&z=17&pt=30.608306%2C59.741463%2Cpm2rdl" target="_blank" rel="noreferrer" className="absolute bottom-4 left-4 rounded-full border border-foreground bg-background/90 px-5 py-3 text-xs uppercase tracking-[0.18em] shadow-glow backdrop-blur-md">Открыть в Яндекс Картах ↗</a>
         </div>
       </div>
     </section>
@@ -338,7 +358,7 @@ function Footer() {
           {NAV.map(([l, h]) => <a key={h} href={h} className="text-xs uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground">{l}</a>)}
         </nav>
         <div className="text-sm text-muted-foreground md:text-right">
-          <p>+7 (900) 123-45-67</p><p>ул. Примерная, 10, Москва</p>
+          <p>+7 (900) 123-45-67</p><p>ул. Тазаева, 3, Колпино</p>
           <p className="mt-4 text-xs">© {new Date().getFullYear()} Лакки · салон груминга</p>
         </div>
       </div>
