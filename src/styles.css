@@ -109,6 +109,22 @@
 .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s ease, transform .9s ease; }
 .reveal.in { opacity: 1; transform: none; }
 
+.service-reveal {
+  transform: translateY(72px);
+  transition-duration: .85s;
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1);
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .service-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 @keyframes floaty { 0%,100% { transform: translateY(0) rotate(var(--r,0deg)); } 50% { transform: translateY(-12px) rotate(var(--r,0deg)); } }
 .floaty { animation: floaty 7s ease-in-out infinite; }
 @keyframes spin-slow { to { transform: rotate(360deg); } }
