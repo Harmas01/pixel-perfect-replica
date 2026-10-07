@@ -62,14 +62,7 @@ const ADVANTAGES = [
 ];
 
 const YANDEX_REVIEWS_URL = "https://yandex.ru/maps/org/lakki/81119680356/reviews/";
-
-const REVIEWS = [
-  { n: "Аксиния С.", date: "22 марта", t: "Наш Ричард преобразился благодаря золотым ручкам мастера Ксении." },
-  { n: "Диана Бармина", date: "2 июля 2025", t: "Сделали всё быстро, аккуратно и качественно. Теперь будем ходить только сюда." },
-  { n: "Екатерина Дмитриева", date: "26 мая 2025", t: "Девочки очень внимательные — наш первый опыт посещения груминга удался." },
-  { n: "Анна Сулима", date: "10 октября 2024", t: "Добрые и нежные грумеры. Собака даже не хотела уходить после процедуры." },
-  { n: "Мария Проценко", date: "2 ноября 2023", t: "Помыли, причесали и подстригли бишона со знанием дела. Придём ещё." },
-] as const;
+const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/81119680356?comments";
 
 function useReveal() {
   useEffect(() => {
@@ -237,6 +230,8 @@ function Why() {
 }
 
 function Reviews() {
+  const [showMore, setShowMore] = useState(false);
+
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
@@ -244,38 +239,33 @@ function Reviews() {
         <div>
           <div className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Яндекс Карты</div>
           <div className="mt-2 flex items-center justify-center gap-3 sm:justify-start">
-            <span className="font-display text-4xl font-semibold">5,0</span>
+            <span className="font-display text-4xl font-semibold">4,9</span>
             <span className="tracking-[0.25em] text-glow">★★★★★</span>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">75 оценок · 32 отзыва</p>
+          <p className="mt-1 text-sm text-muted-foreground">84 оценки · 38 отзывов</p>
         </div>
         <a href={YANDEX_REVIEWS_URL} target="_blank" rel="noreferrer" className="btn-outline">Все отзывы на Яндекс Картах ↗</a>
       </div>
-      <div className="reveal card-line overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-line text-xs uppercase tracking-[0.22em] text-muted-foreground">
-              <th className="px-6 py-5 font-medium">Автор</th>
-              <th className="px-6 py-5 font-medium">Дата</th>
-              <th className="px-6 py-5 font-medium">Отзыв</th>
-              <th className="px-6 py-5 text-right font-medium">Источник</th>
-            </tr>
-          </thead>
-          <tbody>
-            {REVIEWS.map((review) => (
-              <tr key={`${review.n}-${review.date}`} className="border-b border-line last:border-0">
-                <td className="whitespace-nowrap px-6 py-6 font-display text-xl">{review.n}</td>
-                <td className="whitespace-nowrap px-6 py-6 text-sm text-muted-foreground">{review.date}</td>
-                <td className="max-w-xl px-6 py-6 leading-relaxed">«{review.t}»</td>
-                <td className="whitespace-nowrap px-6 py-6 text-right">
-                  <a href={YANDEX_REVIEWS_URL} target="_blank" rel="noreferrer" className="text-xs uppercase tracking-[0.18em] underline-offset-8 hover:underline">Яндекс Карты ↗</a>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="reveal mx-auto max-w-[800px] overflow-hidden rounded-[1.5rem] border border-border bg-white">
+        <iframe
+          title="Свежие отзывы о салоне Лакки на Яндекс Картах"
+          src={YANDEX_REVIEWS_WIDGET_URL}
+          className={`block w-full transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
+        />
       </div>
-      <p className="mt-5 text-center text-xs text-muted-foreground">Короткие выдержки из отзывов посетителей. Полные тексты доступны на Яндекс Картах.</p>
+      <div className="mt-7 flex flex-col items-center gap-4">
+        <button
+          type="button"
+          className="btn-outline"
+          aria-expanded={showMore}
+          onClick={() => setShowMore((value) => !value)}
+        >
+          {showMore ? "Свернуть отзывы ↑" : "Показать ещё отзывы ↓"}
+        </button>
+        <p className="max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
+          Свежие отзывы загружаются напрямую из Яндекс Карт и обновляются автоматически. Полный текст можно раскрыть внутри виджета.
+        </p>
+      </div>
     </section>
   );
 }
