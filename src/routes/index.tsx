@@ -255,12 +255,12 @@ function Why() {
 
 function Reviews() {
   const [i, setI] = useState(0);
-  const timer = useRef<number>();
+  const timer = useRef<number | undefined>(undefined);
   useEffect(() => {
     timer.current = window.setInterval(() => setI((x) => (x + 1) % REVIEWS.length), 6000);
     return () => clearInterval(timer.current);
   }, []);
-  const r = REVIEWS[i];
+  const r = REVIEWS[i]!;
   return (
     <section id="reviews" className="mx-auto max-w-4xl px-5 py-28 text-center md:px-8">
       <SectionTitle eyebrow="kind words" title="What Our Clients Say" />
