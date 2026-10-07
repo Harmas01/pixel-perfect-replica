@@ -5,8 +5,6 @@ import { Toaster } from "@/components/ui/sonner";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about.jpg";
-import beforeImg from "@/assets/before.jpg";
-import afterImg from "@/assets/after.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,7 +20,7 @@ export const Route = createFileRoute("/")({
 
 const NAV = [
   ["Главная", "#home"], ["Услуги", "#services"], ["О нас", "#about"],
-  ["Галерея", "#gallery"], ["Отзывы", "#reviews"], ["Контакты", "#contacts"],
+  ["Отзывы", "#reviews"], ["Контакты", "#contacts"],
 ] as const;
 
 function Paw({ className = "" }: { className?: string }) {
@@ -171,15 +169,17 @@ function Services() {
       <SectionTitle eyebrow="что мы делаем" title="Наши услуги" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {SERVICES.map((s, i) => (
-          <article key={s.t} style={{ transitionDelay: `${i * 70}ms` }} className="reveal card-line group flex flex-col p-8 hover:-translate-y-2 hover:border-foreground hover:shadow-glow">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border transition-all duration-500 group-hover:border-foreground group-hover:shadow-glow">{ICONS[s.k]}</div>
-            <h3 className="mt-6 text-3xl font-semibold">{s.t}</h3>
-            <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
-            <div className="mt-8 flex items-center justify-between border-t border-line pt-5">
-              <span className="font-display text-xl">{s.p}</span>
-              <a href="#booking" className="text-xs uppercase tracking-[0.2em] underline-offset-8 group-hover:underline">Записаться →</a>
-            </div>
-          </article>
+          <div key={s.t} style={{ transitionDelay: `${i * 110}ms` }} className="reveal service-reveal h-full">
+            <article className="card-line group flex h-full flex-col p-8 hover:-translate-y-2 hover:border-foreground hover:shadow-glow">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border transition-all duration-500 group-hover:border-foreground group-hover:shadow-glow">{ICONS[s.k]}</div>
+              <h3 className="mt-6 text-3xl font-semibold">{s.t}</h3>
+              <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
+              <div className="mt-8 flex items-center justify-between border-t border-line pt-5">
+                <span className="font-display text-xl">{s.p}</span>
+                <a href="#booking" className="text-xs uppercase tracking-[0.2em] underline-offset-8 group-hover:underline">Записаться →</a>
+              </div>
+            </article>
+          </div>
         ))}
       </div>
     </section>
@@ -212,26 +212,6 @@ function About() {
           </ul>
         </div>
       </div>
-    </section>
-  );
-}
-
-function BeforeAfter() {
-  const [pos, setPos] = useState(50);
-  return (
-    <section id="gallery" className="mx-auto max-w-6xl px-5 py-28 md:px-8">
-      <SectionTitle eyebrow="преображения" title="До и после" />
-      <div className="reveal relative aspect-[5/4] w-full select-none overflow-hidden rounded-[2rem] border border-border shadow-glow md:aspect-[16/10]">
-        <img src={afterImg} alt="Собака после груминга" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-        <img src={beforeImg} alt="Собака до груминга" loading="lazy" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }} className="absolute inset-0 h-full w-full object-cover" />
-        <div className="pointer-events-none absolute inset-y-0 w-px bg-foreground shadow-glow" style={{ left: `${pos}%` }}>
-          <div className="absolute top-1/2 left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground bg-background text-sm">⟷</div>
-        </div>
-        <span className="absolute left-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">До</span>
-        <span className="absolute right-5 top-5 rounded-full border border-foreground bg-background/70 px-4 py-1 text-xs uppercase tracking-[0.25em]">После</span>
-        <input type="range" min={0} max={100} value={pos} onChange={(e) => setPos(+e.target.value)} aria-label="Ползунок до и после" className="absolute inset-0 h-full w-full cursor-ew-resize opacity-0" />
-      </div>
-      <div className="mt-10 text-center"><a href="#contacts" className="btn-outline">Смотреть галерею</a></div>
     </section>
   );
 }
@@ -374,7 +354,6 @@ function Index() {
       <Hero />
       <Services />
       <About />
-      <BeforeAfter />
       <Why />
       <Reviews />
       <Booking />
