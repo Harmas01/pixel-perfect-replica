@@ -61,7 +61,6 @@ const ADVANTAGES = [
   "Чистый и уютный салон", "Бережное обращение без стресса", "Собаки всех пород и размеров",
 ];
 
-const YANDEX_REVIEWS_URL = "https://yandex.ru/maps/org/lakki/81119680356/reviews/";
 const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/81119680356?comments";
 
 function useReveal() {
@@ -235,17 +234,6 @@ function Reviews() {
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
-      <div className="reveal mb-8 flex flex-col items-center justify-between gap-5 rounded-[1.5rem] border border-border px-6 py-5 text-center sm:flex-row sm:text-left">
-        <div>
-          <div className="text-sm uppercase tracking-[0.25em] text-muted-foreground">Яндекс Карты</div>
-          <div className="mt-2 flex items-center justify-center gap-3 sm:justify-start">
-            <span className="font-display text-4xl font-semibold">4,9</span>
-            <span className="tracking-[0.25em] text-glow">★★★★★</span>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">84 оценки · 38 отзывов</p>
-        </div>
-        <a href={YANDEX_REVIEWS_URL} target="_blank" rel="noreferrer" className="btn-outline">Все отзывы на Яндекс Картах ↗</a>
-      </div>
       <div className="reveal mx-auto max-w-[800px] overflow-hidden rounded-[1.5rem] border border-border bg-white">
         <iframe
           title="Свежие отзывы о салоне Лакки на Яндекс Картах"
