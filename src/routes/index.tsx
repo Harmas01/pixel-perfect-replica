@@ -408,14 +408,13 @@ function About() {
 function Why() {
   const items = [
     ["500+", "Счастливых собак"],
-    ["8", "Лет профессиональной заботы"],
-    ["100%", "Премиальная косметика"],
+    ["2", "Года профессиональной заботы"],
     ["∞", "Любви в каждой детали"],
   ];
   return (
     <section className="relative overflow-hidden border-y border-line py-24">
       <Paw className="absolute -right-10 -top-10 h-64 w-64 text-foreground/5" />
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:grid-cols-2 md:px-8 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-5xl gap-10 px-5 sm:grid-cols-3 md:px-8">
         {items.map(([n, l], i) => (
           <div key={l} style={{ transitionDelay: `${i * 90}ms` }} className="reveal text-center">
             <div className="font-display text-7xl font-semibold text-glow md:text-8xl">{n}</div>
@@ -449,10 +448,6 @@ function Reviews() {
         >
           {showMore ? "Свернуть отзывы ↑" : "Показать ещё отзывы ↓"}
         </button>
-        <p className="max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-          Свежие отзывы загружаются напрямую из Яндекс Карт и обновляются автоматически. Полный
-          текст можно раскрыть внутри виджета.
-        </p>
       </div>
     </section>
   );

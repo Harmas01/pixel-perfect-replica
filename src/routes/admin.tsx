@@ -179,8 +179,6 @@ function AdminPage() {
   );
 
   const orderStats = useMemo(() => {
-    const uniqueClients = new Set(appointments.map((order) => order.phone.trim()).filter(Boolean))
-      .size;
     return [
       {
         label: "Всего заявок",
@@ -193,12 +191,6 @@ function AdminPage() {
         value: appointments.filter((order) => order.status === "new").length,
         note: "Ожидают подтверждения",
         icon: PhoneCall,
-      },
-      {
-        label: "Уникальных клиентов",
-        value: uniqueClients,
-        note: "По номерам телефонов",
-        icon: Users,
       },
     ];
   }, [appointments]);
@@ -264,6 +256,26 @@ function AdminPage() {
       setStandalone(true);
       setInstallPrompt(null);
       toast.success("Приложение установлено");
+    }
+  };
+
+  const openClientSearch = () => {
+    setFilter("all");
+    setQuery("");
+    document.getElementById("appointments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.setTimeout(() => document.getElementById("client-search")?.focus(), 450);
+    toast("Введите имя или телефон клиента в строке поиска");
+  };
+
+  const showCallReminders = () => {
+    const pendingCalls = appointments.filter((order) => order.status === "new").length;
+    setQuery("");
+    setFilter("new");
+    document.getElementById("appointments")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (pendingCalls) {
+      toast.success(`Нужно позвонить: ${pendingCalls}`);
+    } else {
+      toast.success("Нет заявок, ожидающих звонка");
     }
   };
 
@@ -451,6 +463,7 @@ function AdminPage() {
           <div className="relative hidden max-w-md flex-1 sm:block">
             <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
             <input
+              id="client-search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Найти клиента, питомца или услугу"
@@ -463,7 +476,7 @@ function AdminPage() {
               <p className="text-[11px] text-white/40">Колпино</p>
             </div>
             <button
-              onClick={() => toast("Уведомления пока не подключены")}
+              onClick={showCallReminders}
               className="relative ml-3 grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[.04] text-white/60 transition hover:text-white"
               aria-label="Уведомления"
             >
@@ -513,7 +526,7 @@ function AdminPage() {
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             {orderStats.map(({ label, value, note, icon: Icon }) => (
               <Panel
                 key={label}
@@ -670,6 +683,7 @@ function AdminPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2.5">
                   <button
+                    type="button"
                     onClick={() => setShowNew(true)}
                     className="rounded-2xl bg-white p-4 text-left text-black transition hover:-translate-y-0.5"
                   >
@@ -678,7 +692,8 @@ function AdminPage() {
                     <p className="mt-1 text-[10px] text-black/50">Добавить клиента</p>
                   </button>
                   <button
-                    onClick={() => toast("Используйте строку поиска по имени или телефону")}
+                    type="button"
+                    onClick={openClientSearch}
                     className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
                   >
                     <Users className="h-5 w-5 text-white/65" />
@@ -686,14 +701,16 @@ function AdminPage() {
                     <p className="mt-1 text-[10px] text-white/35">Поиск по заявкам</p>
                   </button>
                   <button
-                    onClick={() => toast("Отправка сообщений пока не подключена")}
+                    type="button"
+                    onClick={showCallReminders}
                     className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
                   >
                     <MessageCircle className="h-5 w-5 text-white/65" />
                     <p className="mt-5 text-xs font-semibold">Напомнить</p>
-                    <p className="mt-1 text-[10px] text-white/35">Пока не подключено</p>
+                    <p className="mt-1 text-[10px] text-white/35">Ожидают звонка</p>
                   </button>
                   <button
+                    type="button"
                     onClick={installApplication}
                     className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
                   >
