@@ -19,6 +19,7 @@ import {
   Settings,
   Sparkles,
   Star,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -36,7 +37,8 @@ import {
 } from "@/lib/orders";
 import {
   appendCustomService,
-  readCustomServices,
+  deleteSalonService,
+  readSalonServices,
   SERVICES_UPDATED_EVENT,
   type SalonService,
 } from "@/lib/services";
@@ -80,12 +82,34 @@ const NAV = [
   { label: "Настройки", href: "#settings", icon: Settings },
 ] as const;
 
-const BASE_SERVICES = [
-  { name: "Комплексный груминг", duration: 90, price: 3500 },
-  { name: "Купание и сушка", duration: 60, price: 1800 },
-  { name: "Стрижка и стайлинг", duration: 90, price: 2500 },
-  { name: "Стрижка когтей", duration: 20, price: 500 },
-] as const;
+function formatRemainingMinutes(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours && minutes) return `${hours} ч ${minutes} мин`;
+  if (hours) return `${hours} ч`;
+  return `${minutes} мин`;
+}
+
+export function getWorkdayStatus(now = new Date()) {
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  const opening = 10 * 60;
+  const closing = 21 * 60;
+
+  if (minutesNow >= opening && minutesNow < closing) {
+    return {
+      isOpen: true,
+      text: `До конца рабочего дня: ${formatRemainingMinutes(closing - minutesNow)}`,
+    };
+  }
+
+  const untilOpening = minutesNow < opening ? opening - minutesNow : 24 * 60 - minutesNow + opening;
+
+  return {
+    isOpen: false,
+    text: `Салон закрыт · до открытия ${formatRemainingMinutes(untilOpening)}`,
+  };
+}
 
 type InstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -126,7 +150,8 @@ function AdminPage() {
   const [query, setQuery] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showServiceForm, setShowServiceForm] = useState(false);
-  const [customServices, setCustomServices] = useState<SalonService[]>([]);
+  const [salonServices, setSalonServices] = useState<SalonService[]>(() => readSalonServices());
+  const [workdayStatus, setWorkdayStatus] = useState(() => getWorkdayStatus());
   const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
   const [callChecked, setCallChecked] = useState(false);
   const [ordersReady, setOrdersReady] = useState(false);
@@ -189,7 +214,7 @@ function AdminPage() {
   );
 
   useEffect(() => {
-    const refreshServices = () => setCustomServices(readCustomServices());
+    const refreshServices = () => setSalonServices(readSalonServices());
     refreshServices();
     window.addEventListener("storage", refreshServices);
     window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
@@ -197,6 +222,13 @@ function AdminPage() {
       window.removeEventListener("storage", refreshServices);
       window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
     };
+  }, []);
+
+  useEffect(() => {
+    const updateWorkdayStatus = () => setWorkdayStatus(getWorkdayStatus());
+    updateWorkdayStatus();
+    const timer = window.setInterval(updateWorkdayStatus, 60_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -465,8 +497,19 @@ function AdminPage() {
               </h1>
               <p className="mt-2 text-sm text-white/45">Только данные из сохранённых заявок.</p>
             </div>
-            <div className="flex items-center gap-2 rounded-2xl border border-emerald-300/15 bg-emerald-300/[.06] px-3.5 py-2 text-xs text-emerald-200">
-              <span className="h-2 w-2 rounded-full bg-emerald-300" /> Часы работы: 10:00–21:00
+            <div
+              className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs ${
+                workdayStatus.isOpen
+                  ? "border-emerald-300/15 bg-emerald-300/[.06] text-emerald-200"
+                  : "border-red-300/20 bg-red-400/[.08] text-red-200"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  workdayStatus.isOpen ? "bg-emerald-300" : "bg-red-400"
+                }`}
+              />
+              <span>Часы работы: 10:00–21:00 · {workdayStatus.text}</span>
             </div>
           </div>
 
@@ -666,7 +709,7 @@ function AdminPage() {
                   <div>
                     <h2 className="font-sans text-base font-semibold">Услуги салона</h2>
                     <p className="mt-1 text-[11px] text-white/35">
-                      {BASE_SERVICES.length + customServices.length} услуг доступно для записи
+                      {salonServices.length} услуг доступно для записи
                     </p>
                   </div>
                   <button
@@ -677,7 +720,7 @@ function AdminPage() {
                   </button>
                 </div>
                 <div className="mt-5 max-h-[290px] space-y-2 overflow-y-auto pr-1">
-                  {[...BASE_SERVICES, ...customServices].map((service, index) => (
+                  {salonServices.map((service, index) => (
                     <div
                       key={`${service.name}-${index}`}
                       className="flex items-center justify-between gap-3 rounded-2xl border border-white/[.08] bg-white/[.025] p-3.5"
@@ -686,12 +729,26 @@ function AdminPage() {
                         <p className="truncate text-xs font-medium">{service.name}</p>
                         <p className="mt-1 text-[10px] text-white/35">
                           {service.duration} мин
-                          {index >= BASE_SERVICES.length ? " · добавлена администратором" : ""}
+                          {typeof service.id === "number" ? " · добавлена администратором" : ""}
                         </p>
                       </div>
-                      <span className="shrink-0 text-xs text-white/55">
-                        от {service.price.toLocaleString("ru-RU")} ₽
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="text-xs text-white/55">
+                          от {service.price.toLocaleString("ru-RU")} ₽
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteSalonService(service.id);
+                            toast.success(`Услуга «${service.name}» удалена`);
+                          }}
+                          className="grid h-8 w-8 place-items-center rounded-xl border border-red-300/10 text-red-200/60 transition hover:bg-red-300/10 hover:text-red-100"
+                          aria-label={`Удалить услугу ${service.name}`}
+                          title="Удалить услугу"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -839,7 +896,7 @@ function AdminPage() {
               <div className="sm:col-span-2">
                 <AdminField label="Услуга">
                   <select name="service" className="field bg-[#111]">
-                    {[...BASE_SERVICES, ...customServices].map((service, index) => (
+                    {salonServices.map((service, index) => (
                       <option key={`${service.name}-${index}`}>{service.name}</option>
                     ))}
                   </select>

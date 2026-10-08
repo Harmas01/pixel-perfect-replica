@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { appendOrder, isTimeSlotTaken, readOrders } from "@/lib/orders";
-import { readCustomServices, SERVICES_UPDATED_EVENT, type SalonService } from "@/lib/services";
+import { readSalonServices, SERVICES_UPDATED_EVENT, type SalonService } from "@/lib/services";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about.jpg";
@@ -174,6 +174,22 @@ function useReveal() {
   }, []);
 }
 
+function useSalonServices() {
+  const [services, setServices] = useState<SalonService[]>(() => readSalonServices());
+
+  useEffect(() => {
+    const refreshServices = () => setServices(readSalonServices());
+    window.addEventListener("storage", refreshServices);
+    window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
+    return () => {
+      window.removeEventListener("storage", refreshServices);
+      window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
+    };
+  }, []);
+
+  return services;
+}
+
 function Eyebrow({ children }: { children: ReactNode }) {
   return <p className="font-script text-3xl text-glow md:text-4xl">{children}</p>;
 }
@@ -313,11 +329,15 @@ function SectionTitle({
 }
 
 function Services() {
+  const availableServices = useSalonServices();
+  const availableNames = new Set(availableServices.map((service) => service.name));
+  const visibleServices = SERVICES.filter((service) => availableNames.has(service.t));
+
   return (
     <section id="services" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="что мы делаем" title="Наши услуги" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {SERVICES.map((s, i) => (
+        {visibleServices.map((s, i) => (
           <div
             key={s.t}
             style={{ transitionDelay: `${i * 110}ms` }}
@@ -439,19 +459,7 @@ function Reviews() {
 }
 
 function Booking() {
-  const [customServices, setCustomServices] = useState<SalonService[]>([]);
-
-  useEffect(() => {
-    const refreshServices = () =>
-      setCustomServices(readCustomServices().filter((service) => service.active));
-    refreshServices();
-    window.addEventListener("storage", refreshServices);
-    window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
-    return () => {
-      window.removeEventListener("storage", refreshServices);
-      window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
-    };
-  }, []);
+  const availableServices = useSalonServices();
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -537,12 +545,7 @@ function Booking() {
               <option value="" disabled className="bg-background">
                 Выберите услугу
               </option>
-              {SERVICES.map((s) => (
-                <option key={s.t} className="bg-background">
-                  {s.t}
-                </option>
-              ))}
-              {customServices.map((service) => (
+              {availableServices.map((service) => (
                 <option key={service.id} className="bg-background">
                   {service.name}
                 </option>
