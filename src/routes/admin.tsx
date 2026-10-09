@@ -79,8 +79,6 @@ import {
 
 const WINDOWS_APP_DOWNLOAD_URL =
   "https://github.com/Harmas01/pixel-perfect-replica/releases/download/windows-app-latest/LuckyAdmin.exe";
-const YANDEX_REVIEWS_WIDGET_URL =
-  "https://yandex.ru/maps-reviews-widget/184039255742?comments";
 const YANDEX_REVIEWS_URL =
   "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
 const GALLERY_FALLBACKS = [heroDog, aboutImg, logo] as const;
@@ -1129,18 +1127,10 @@ function AdminPage({
                     Новые отзывы на Яндекс Картах
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-white/35">
-                    Виджет открыт сразу и показывает актуальные отзывы карточки салона «Лакки».
+                    Откройте страницу салона, чтобы посмотреть актуальные отзывы клиентов.
                   </p>
                 </div>
                 <Star className="h-5 w-5 shrink-0 text-amber-200" />
-              </div>
-              <div className="mx-auto mt-5 max-w-[800px] overflow-hidden rounded-2xl bg-white">
-                <iframe
-                  title="Новые отзывы о салоне Лакки на Яндекс Картах"
-                  src={YANDEX_REVIEWS_WIDGET_URL}
-                  loading="lazy"
-                  className="block h-[680px] w-full border-0"
-                />
               </div>
               <a
                 href={YANDEX_REVIEWS_URL}
@@ -1148,7 +1138,7 @@ function AdminPage({
                 rel="noreferrer"
                 className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
               >
-                Открыть все отзывы на Яндекс Картах <ArrowUpRight className="h-4 w-4" />
+                Открыть отзывы на Яндекс Картах <ArrowUpRight className="h-4 w-4" />
               </a>
             </Panel>
           </div>
