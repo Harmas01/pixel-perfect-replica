@@ -40,6 +40,7 @@ import logo from "@/assets/logo.png";
 import { Toaster } from "@/components/ui/sonner";
 import {
   ORDERS_STORAGE_KEY,
+  DEFAULT_SALON,
   appendOrder,
   deleteOrderRemote,
   fetchOrders,
@@ -747,7 +748,7 @@ function AdminPage({
         );
         for (const order of newOrders) {
           const notification = new Notification(`Новая запись: ${order.pet}`, {
-            body: `${order.owner} · ${order.date?.split("-").reverse().join(".") || "дата не указана"} в ${order.time}`,
+            body: `${order.owner} · ${order.date?.split("-").reverse().join(".") || "дата не указана"} в ${order.time} · ${order.salon || DEFAULT_SALON}`,
             icon: new URL("icon-192.png", document.baseURI).toString(),
             tag: `lucky-order-${order.id}`,
           });
@@ -948,7 +949,7 @@ function AdminPage({
       const matchesFilter = filter === "all" || item.status === filter;
       const matchesQuery =
         !normalized ||
-        [item.owner, item.pet, item.breed, item.service, item.phone]
+        [item.owner, item.pet, item.breed, item.service, item.salon, item.phone]
           .join(" ")
           .toLocaleLowerCase("ru")
           .includes(normalized);
@@ -1074,6 +1075,7 @@ function AdminPage({
         pet,
         breed: String(data.get("breed") || "Порода не указана"),
         service: String(data.get("service") || "Комплексный груминг"),
+        salon: String(data.get("salon") || DEFAULT_SALON),
         price: Number(data.get("price")) || 3500,
         status: "new",
         phone: String(data.get("phone") || "Телефон не указан"),
@@ -1467,6 +1469,9 @@ function AdminPage({
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm text-white/75">{item.service}</p>
+                        <p className="mt-1 truncate text-[11px] text-white/40">
+                          Салон: {item.salon || DEFAULT_SALON}
+                        </p>
                         <p className="mt-1 text-xs font-medium text-white/45">{orderMeta(item)}</p>
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
@@ -1985,6 +1990,18 @@ function AdminPage({
                 />
               </AdminField>
               <div className="sm:col-span-2">
+                <AdminField label="Салон">
+                  <select
+                    name="salon"
+                    required
+                    className="field bg-[#111]"
+                    defaultValue={DEFAULT_SALON}
+                  >
+                    <option value={DEFAULT_SALON}>{DEFAULT_SALON}</option>
+                  </select>
+                </AdminField>
+              </div>
+              <div className="sm:col-span-2">
                 <AdminField label="Услуга">
                   <select name="service" className="field bg-[#111]">
                     {salonServices.map((service, index) => (
@@ -2067,6 +2084,12 @@ function AdminPage({
                     ? confirmingOrder.date.split("-").reverse().join(".")
                     : "Сегодня"}
                   , {confirmingOrder.time}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-white/35">Салон</dt>
+                <dd className="mt-1 font-medium">
+                  {confirmingOrder.salon || DEFAULT_SALON}
                 </dd>
               </div>
               <div className="sm:col-span-2">

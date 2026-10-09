@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { appendOrder, isTimeSlotTakenRemote } from "@/lib/orders";
+import { appendOrder, DEFAULT_SALON, isTimeSlotTakenRemote } from "@/lib/orders";
 import {
   DEFAULT_SALON_SERVICES,
   fetchSalonServices,
@@ -668,6 +668,7 @@ function Booking() {
         pet: String(data.get("pet")),
         breed: String(data.get("breed") || "Не указана"),
         service: String(data.get("service")),
+        salon: String(data.get("salon") || DEFAULT_SALON),
         date,
         time,
         note: String(data.get("note") || ""),
@@ -732,6 +733,14 @@ function Booking() {
           <label>
             <L>Порода</L>
             <input name="breed" className="field" placeholder="Французский бульдог" />
+          </label>
+          <label className="sm:col-span-2">
+            <L>Выбор точки (салона)</L>
+            <select name="salon" required className="field" defaultValue={DEFAULT_SALON}>
+              <option value={DEFAULT_SALON} className="bg-background">
+                {DEFAULT_SALON}
+              </option>
+            </select>
           </label>
           <label className="sm:col-span-2">
             <L>Услуга</L>

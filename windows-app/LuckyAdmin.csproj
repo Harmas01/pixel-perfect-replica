@@ -8,6 +8,9 @@
     <AssemblyName>LuckyAdmin</AssemblyName>
     <RootNamespace>LuckyAdmin</RootNamespace>
     <Version>1.0.0</Version>
+    <ApplicationIcon>lucky.ico</ApplicationIcon>
+    <Product>Лакки — администратор</Product>
+    <Description>Приложение администратора салона груминга «Лакки»</Description>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

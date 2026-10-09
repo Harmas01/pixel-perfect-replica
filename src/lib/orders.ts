@@ -1,5 +1,7 @@
 export type OrderStatus = "new" | "confirmed" | "progress" | "done";
 
+export const DEFAULT_SALON = "Лакки — Колпино, ул. Тазаева, 3";
+
 export type Order = {
   id: number;
   time: string;
@@ -7,6 +9,7 @@ export type Order = {
   pet: string;
   breed: string;
   service: string;
+  salon: string;
   price: number;
   status: OrderStatus;
   phone: string;
@@ -23,6 +26,7 @@ type AppointmentRow = {
   pet: string;
   breed: string;
   service: string;
+  salon: string;
   appointment_date: string;
   appointment_time: string;
   note: string;
@@ -72,6 +76,7 @@ function toRow(order: Order) {
     pet: order.pet,
     breed: order.breed,
     service: order.service,
+    salon: order.salon || DEFAULT_SALON,
     appointment_date: order.date,
     appointment_time: order.time,
     note: order.note || "",
@@ -91,6 +96,7 @@ function fromRow(row: AppointmentRow): Order {
     pet: row.pet,
     breed: row.breed,
     service: row.service,
+    salon: row.salon || DEFAULT_SALON,
     date: row.appointment_date,
     time: row.appointment_time,
     note: row.note,
@@ -120,7 +126,11 @@ export function readOrders(fallback: Order[] = []): Order[] {
   try {
     const parsed = JSON.parse(stored);
     return Array.isArray(parsed)
-      ? sortOrders((parsed as Order[]).filter((order) => !isLegacyDemoOrder(order)))
+      ? sortOrders(
+          (parsed as Order[])
+            .filter((order) => !isLegacyDemoOrder(order))
+            .map((order) => ({ ...order, salon: order.salon || DEFAULT_SALON })),
+        )
       : fallback;
   } catch {
     return fallback;
@@ -135,7 +145,7 @@ export function writeOrders(orders: Order[]) {
 export async function fetchOrders(accessToken: string): Promise<Order[] | null> {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/appointments?select=id,owner,phone,pet,breed,service,appointment_date,appointment_time,note,price,status,source,created_at&order=appointment_date.asc,appointment_time.asc`,
+      `${SUPABASE_URL}/rest/v1/appointments?select=id,owner,phone,pet,breed,service,salon,appointment_date,appointment_time,note,price,status,source,created_at&order=appointment_date.asc,appointment_time.asc`,
       { headers: apiHeaders(accessToken) },
     );
     if (!response.ok) return null;
