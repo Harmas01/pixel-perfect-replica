@@ -573,6 +573,41 @@ function AdminAccessGate() {
   const [initialError, setInitialError] = useState("");
 
   useEffect(() => {
+    if (!session) return;
+
+    const signOutForMidnight = () => {
+      setSession(null);
+      setInitialError("Сеанс завершён в 00:00. Войдите снова.");
+      void signOutAdmin();
+    };
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const timer = window.setTimeout(
+      signOutForMidnight,
+      nextMidnight.getTime() - now.getTime(),
+    );
+    const checkDate = () => {
+      const current = new Date();
+      const dateKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(
+        current.getDate(),
+      ).padStart(2, "0")}`;
+      if (dateKey !== session.authenticated_on) signOutForMidnight();
+    };
+    const checkVisibility = () => {
+      if (document.visibilityState === "visible") checkDate();
+    };
+
+    window.addEventListener("focus", checkDate);
+    document.addEventListener("visibilitychange", checkVisibility);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", checkDate);
+      document.removeEventListener("visibilitychange", checkVisibility);
+    };
+  }, [session]);
+
+  useEffect(() => {
     let active = true;
     getAuthorizedSession()
       .then((nextSession) => {

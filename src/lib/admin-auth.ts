@@ -15,6 +15,7 @@ export type AdminAuthSession = {
   access_token: string;
   refresh_token: string;
   expires_at: number;
+  authenticated_on: string;
   user: AdminAuthUser;
 };
 
@@ -32,6 +33,13 @@ type AuthResponse = {
 
 function normalizeEmail(email: string) {
   return email.trim().toLocaleLowerCase("en-US");
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function authHeaders(accessToken?: string) {
@@ -71,6 +79,7 @@ function createSession(payload: AuthResponse): AdminAuthSession {
     refresh_token: payload.refresh_token,
     expires_at:
       payload.expires_at || Math.floor(Date.now() / 1000) + (payload.expires_in || 3600),
+    authenticated_on: localDateKey(),
     user: payload.user,
   };
 }
@@ -135,7 +144,8 @@ async function refreshSession(session: AdminAuthSession) {
     headers: authHeaders(),
     body: JSON.stringify({ refresh_token: session.refresh_token }),
   });
-  return createSession(await readAuthResponse(response));
+  const refreshedSession = createSession(await readAuthResponse(response));
+  return { ...refreshedSession, authenticated_on: session.authenticated_on };
 }
 
 async function sendAdminLoginCode(email: string) {
@@ -154,6 +164,10 @@ export async function getAuthorizedSession() {
   clearLegacySession();
   let session = readSession();
   if (!session) return null;
+  if (session.authenticated_on !== localDateKey()) {
+    clearSession();
+    return null;
+  }
 
   try {
     if (session.expires_at <= Math.floor(Date.now() / 1000) + 30) {
