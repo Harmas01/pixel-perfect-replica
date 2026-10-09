@@ -164,10 +164,8 @@ const SERVICES = [
 const ADVANTAGES = [
   "Профессиональные грумеры",
   "Индивидуальный подход",
-  "Качественная косметика",
   "Чистый и уютный салон",
   "Бережное обращение без стресса",
-  "Собаки всех пород и размеров",
 ];
 
 const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/184039255742?comments";
