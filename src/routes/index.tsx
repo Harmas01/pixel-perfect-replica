@@ -168,6 +168,8 @@ const ADVANTAGES = [
   "Бережное обращение без стресса",
 ];
 
+const YANDEX_REVIEWS_WIDGET_URL =
+  "https://yandex.ru/maps-reviews-widget/184039255742?comments";
 const YANDEX_REVIEWS_URL =
   "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
 
@@ -557,18 +559,22 @@ function Reviews() {
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
-      <div className="card-line reveal mx-auto max-w-3xl p-8 text-center sm:p-12">
-        <Paw className="mx-auto h-10 w-10 text-foreground/60" />
-        <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-muted-foreground">
-          Посмотрите оценки и актуальные отзывы клиентов о салоне «Лакки» на Яндекс Картах.
-        </p>
+      <div className="reveal mx-auto max-w-[800px] overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_24px_80px_rgba(255,255,255,.08)]">
+        <iframe
+          title="Свежие отзывы о салоне Лакки на Яндекс Картах"
+          src={YANDEX_REVIEWS_WIDGET_URL}
+          loading="lazy"
+          className="block h-[680px] w-full border-0 bg-white"
+        />
+      </div>
+      <div className="mt-7 flex justify-center">
         <a
           href={YANDEX_REVIEWS_URL}
           target="_blank"
           rel="noreferrer"
-          className="btn-solid mt-7 inline-flex"
+          className="btn-outline"
         >
-          Открыть отзывы на Яндекс Картах ↗
+          Посмотреть ещё на Яндекс Картах ↗
         </a>
       </div>
     </section>
