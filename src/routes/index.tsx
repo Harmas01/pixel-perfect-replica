@@ -15,6 +15,7 @@ import {
   getBookingDateBounds,
   readBookingSettings,
 } from "@/lib/settings";
+import { fetchGalleryImageUrls, GALLERY_IMAGES_UPDATED_EVENT } from "@/lib/site-content";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about-dog.png";
@@ -209,6 +210,30 @@ function useSalonServices() {
   }, []);
 
   return services;
+}
+
+function useGalleryImages() {
+  const [images, setImages] = useState<Array<string | null>>([null, null, null]);
+
+  useEffect(() => {
+    let active = true;
+    const refreshImages = () => {
+      void fetchGalleryImageUrls().then((nextImages) => {
+        if (active) setImages(nextImages);
+      });
+    };
+
+    refreshImages();
+    window.addEventListener("storage", refreshImages);
+    window.addEventListener(GALLERY_IMAGES_UPDATED_EVENT, refreshImages);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", refreshImages);
+      window.removeEventListener(GALLERY_IMAGES_UPDATED_EVENT, refreshImages);
+    };
+  }, []);
+
+  return images;
 }
 
 function Eyebrow({ children }: { children: ReactNode }) {
@@ -465,27 +490,28 @@ function Why() {
 }
 
 function Gallery() {
+  const galleryImages = useGalleryImages();
   const photos = [
     {
-      src: heroDog,
-      alt: "Ухоженный французский бульдог после груминга в салоне Лакки",
+      src: galleryImages[0] || heroDog,
+      alt: "Ухоженная собака после груминга в салоне Лакки",
       label: "Бережный уход",
       className: "md:col-span-2 md:row-span-2",
-      imageClassName: "object-cover object-[70%_center]",
+      imageClassName: galleryImages[0] ? "object-cover" : "object-cover object-[70%_center]",
     },
     {
-      src: aboutImg,
+      src: galleryImages[1] || aboutImg,
       alt: "Ухоженная собака после груминга в салоне Лакки",
       label: "Забота в каждой детали",
       className: "",
       imageClassName: "object-cover",
     },
     {
-      src: logo,
-      alt: "Логотип салона груминга Лакки",
+      src: galleryImages[2] || logo,
+      alt: galleryImages[2] ? "Фотография салона груминга Лакки" : "Логотип салона груминга Лакки",
       label: "Салон «Лакки»",
       className: "",
-      imageClassName: "object-contain p-10",
+      imageClassName: galleryImages[2] ? "object-cover" : "object-contain p-10",
     },
   ];
 

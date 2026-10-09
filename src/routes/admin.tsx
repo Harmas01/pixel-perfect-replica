@@ -22,11 +22,21 @@ import {
   Settings,
   Star,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
+import heroDog from "@/assets/hero-dog.jpg";
+import aboutImg from "@/assets/about-dog.png";
 import { Toaster } from "@/components/ui/sonner";
 import {
   ORDERS_STORAGE_KEY,
@@ -60,6 +70,12 @@ import {
   signOutAdmin,
   type AdminAuthSession,
 } from "@/lib/admin-auth";
+import {
+  fetchGalleryImageUrls,
+  GALLERY_IMAGES_UPDATED_EVENT,
+  uploadGalleryImage,
+  type GalleryImageSlot,
+} from "@/lib/site-content";
 
 const WINDOWS_APP_DOWNLOAD_URL =
   "https://github.com/Harmas01/pixel-perfect-replica/releases/download/windows-app-latest/LuckyAdmin.exe";
@@ -67,6 +83,7 @@ const YANDEX_REVIEWS_WIDGET_URL =
   "https://yandex.ru/maps-reviews-widget/184039255742?comments";
 const YANDEX_REVIEWS_URL =
   "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
+const GALLERY_FALLBACKS = [heroDog, aboutImg, logo] as const;
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -374,6 +391,8 @@ function AdminPage({
   const [callChecked, setCallChecked] = useState(false);
   const [ordersReady, setOrdersReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [galleryImages, setGalleryImages] = useState<Array<string | null>>([null, null, null]);
+  const [galleryUploading, setGalleryUploading] = useState<GalleryImageSlot | null>(null);
   const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
   const [bookingDateBounds, setBookingDateBounds] = useState<{
     min: string;
@@ -446,6 +465,24 @@ function AdminPage({
       window.removeEventListener(SERVICES_UPDATED_EVENT, handleServicesChange);
     };
   }, [authSession.access_token]);
+
+  useEffect(() => {
+    let active = true;
+    const refreshGalleryImages = () => {
+      void fetchGalleryImageUrls().then((images) => {
+        if (active) setGalleryImages(images);
+      });
+    };
+
+    refreshGalleryImages();
+    window.addEventListener("storage", refreshGalleryImages);
+    window.addEventListener(GALLERY_IMAGES_UPDATED_EVENT, refreshGalleryImages);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", refreshGalleryImages);
+      window.removeEventListener(GALLERY_IMAGES_UPDATED_EVENT, refreshGalleryImages);
+    };
+  }, []);
 
   useEffect(() => {
     const refreshBookingSettings = () => {
@@ -618,6 +655,29 @@ function AdminPage({
     setShowNew(false);
     event.currentTarget.reset();
     toast.success(`${pet}: запись добавлена`);
+  };
+
+  const changeGalleryImage = async (
+    slot: GalleryImageSlot,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    setGalleryUploading(slot);
+    try {
+      const url = await uploadGalleryImage(file, slot, authSession.access_token);
+      setGalleryImages((images) =>
+        images.map((image, index) => (index === slot - 1 ? url : image)),
+      );
+      toast.success(`Фотография №${slot} обновлена в галерее`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось обновить фотографию");
+    } finally {
+      input.value = "";
+      setGalleryUploading(null);
+    }
   };
 
   const addService = async (event: FormEvent<HTMLFormElement>) => {
@@ -1126,7 +1186,7 @@ function AdminPage({
                 Параметры салона
               </h2>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
-                Управляйте периодом, на который клиенты могут выбирать дату записи.
+                Управляйте онлайн-записью и фотографиями галереи на основном сайте.
               </p>
             </div>
 
@@ -1173,6 +1233,68 @@ function AdminPage({
             </Panel>
 
             <Panel className="mt-4 p-5 sm:p-7">
+              <div className="flex items-start gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
+                  <Upload className="h-5 w-5 text-white/65" />
+                </div>
+                <div>
+                  <h3 className="font-sans text-base font-semibold">Фотографии галереи</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/40">
+                    Замените любую из трёх фотографий. Изменение сразу появится на основном сайте.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {[0, 1, 2].map((index) => {
+                  const slot = (index + 1) as GalleryImageSlot;
+                  const isUploading = galleryUploading === slot;
+                  const usesLogoFallback = index === 2 && !galleryImages[index];
+
+                  return (
+                    <div
+                      key={slot}
+                      className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.025] p-3"
+                    >
+                      <img
+                        src={galleryImages[index] || GALLERY_FALLBACKS[index]}
+                        alt={`Фотография №${slot} в галерее`}
+                        className={`aspect-square w-full rounded-xl bg-black object-cover ${
+                          usesLogoFallback ? "object-contain p-4" : ""
+                        }`}
+                      />
+                      <label
+                        className={`mt-3 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-3 text-xs font-semibold text-black transition hover:shadow-[0_0_20px_rgba(255,255,255,.12)] ${
+                          isUploading ? "pointer-events-none opacity-60" : ""
+                        }`}
+                      >
+                        {isUploading ? (
+                          <>
+                            <LoaderCircle className="h-4 w-4 animate-spin" /> Загрузка…
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4" /> Заменить №{slot}
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={galleryUploading !== null}
+                          onChange={(event) => void changeGalleryImage(slot, event)}
+                          className="sr-only"
+                        />
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-white/35">
+                Поддерживаются JPG, PNG и WebP размером до 8 МБ.
+              </p>
+            </Panel>
+
+            <Panel className="mt-4 p-5 sm:p-7">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-4">
                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-300/[.09] text-sky-200">
@@ -1203,7 +1325,7 @@ function AdminPage({
               <div>
                 <h3 className="font-sans text-sm font-semibold">Локальное хранение данных</h3>
                 <p className="mt-1 text-[11px] leading-5 text-white/35">
-                  Заявки, услуги и настройки хранятся в этом браузере на текущем устройстве.
+                  Заявки хранятся в этом браузере. Услуги и фотографии сайта синхронизируются через Supabase.
                 </p>
               </div>
             </Panel>
