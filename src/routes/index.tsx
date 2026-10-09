@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { appendOrder, isTimeSlotTaken, readOrders } from "@/lib/orders";
+import { appendOrder, isTimeSlotTakenRemote } from "@/lib/orders";
 import {
   DEFAULT_SALON_SERVICES,
   fetchSalonServices,
@@ -570,6 +570,7 @@ function Booking() {
     min: string;
     max: string;
   } | null>(null);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
   useEffect(() => {
     const refreshBookingWindow = () => {
@@ -588,9 +589,10 @@ function Booking() {
     };
   }, []);
 
-  const onSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const data = new FormData(form);
     const date = String(data.get("date"));
     const time = String(data.get("time"));
 
@@ -608,28 +610,35 @@ function Booking() {
       return;
     }
 
-    if (isTimeSlotTaken(readOrders(), date, time)) {
-      toast.error("Это время уже занято. Выберите другую дату или время.");
-      return;
-    }
+    setBookingSubmitting(true);
+    try {
+      if (await isTimeSlotTakenRemote(date, time)) {
+        toast.error("Это время уже занято. Выберите другую дату или время.");
+        return;
+      }
 
-    appendOrder({
-      id: Date.now(),
-      owner: String(data.get("owner")),
-      phone: String(data.get("phone")),
-      pet: String(data.get("pet")),
-      breed: String(data.get("breed") || "Не указана"),
-      service: String(data.get("service")),
-      date,
-      time,
-      note: String(data.get("note") || ""),
-      price: 0,
-      status: "new",
-      source: "website",
-      createdAt: new Date().toISOString(),
-    });
-    toast.success("Заявка принята. Администратор позвонит вам и подтвердит запись.");
-    e.currentTarget.reset();
+      await appendOrder({
+        id: Date.now(),
+        owner: String(data.get("owner")),
+        phone: String(data.get("phone")),
+        pet: String(data.get("pet")),
+        breed: String(data.get("breed") || "Не указана"),
+        service: String(data.get("service")),
+        date,
+        time,
+        note: String(data.get("note") || ""),
+        price: 0,
+        status: "new",
+        source: "website",
+        createdAt: new Date().toISOString(),
+      });
+      toast.success("Заявка принята. Администратор получит уведомление и позвонит вам.");
+      form.reset();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось отправить заявку");
+    } finally {
+      setBookingSubmitting(false);
+    }
   };
   const L = ({ children }: { children: ReactNode }) => (
     <span className="mb-2 block text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -730,8 +739,12 @@ function Booking() {
               placeholder="Что нам важно знать о вашей собаке"
             />
           </label>
-          <button type="submit" className="btn-solid sm:col-span-2">
-            Записаться на приём
+          <button
+            type="submit"
+            disabled={bookingSubmitting}
+            className="btn-solid sm:col-span-2 disabled:cursor-wait disabled:opacity-60"
+          >
+            {bookingSubmitting ? "Отправляем заявку…" : "Записаться на приём"}
           </button>
         </form>
       </div>

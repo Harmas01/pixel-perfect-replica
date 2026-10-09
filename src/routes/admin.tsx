@@ -8,6 +8,7 @@ import {
   Download,
   Eye,
   EyeOff,
+  Images,
   KeyRound,
   LayoutDashboard,
   LoaderCircle,
@@ -28,6 +29,7 @@ import {
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ChangeEvent,
   type FormEvent,
@@ -40,10 +42,13 @@ import aboutImg from "@/assets/about-dog.png";
 import { Toaster } from "@/components/ui/sonner";
 import {
   ORDERS_STORAGE_KEY,
-  ORDERS_UPDATED_EVENT,
-  isTimeSlotTaken,
+  appendOrder,
+  deleteOrderRemote,
+  fetchOrders,
+  isTimeSlotTakenRemote,
   readOrders,
-  writeOrders,
+  syncLocalOrdersToRemote,
+  updateOrderStatusRemote,
   type Order,
   type OrderStatus,
 } from "@/lib/orders";
@@ -82,6 +87,7 @@ const WINDOWS_APP_DOWNLOAD_URL =
 const YANDEX_REVIEWS_URL =
   "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
 const GALLERY_FALLBACKS = [heroDog, aboutImg, logo] as const;
+const NOTIFICATIONS_STORAGE_KEY = "lucky-admin-notifications-enabled";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -116,6 +122,7 @@ const NEXT_STATUS: Record<OrderStatus, OrderStatus> = {
 const NAV = [
   { label: "Обзор", href: "#overview", icon: LayoutDashboard },
   { label: "Записи", href: "#appointments", icon: CalendarDays },
+  { label: "Галерея", href: "#gallery-admin", icon: Images },
   { label: "Отзывы", href: "#reviews-admin", icon: Star },
   { label: "Настройки", href: "#settings", icon: Settings },
 ] as const;
@@ -388,6 +395,9 @@ function AdminPage({
   const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
   const [callChecked, setCallChecked] = useState(false);
   const [ordersReady, setOrdersReady] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const knownOrderIds = useRef<Set<number>>(new Set());
+  const ordersInitialized = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [galleryImages, setGalleryImages] = useState<Array<string | null>>([null, null, null]);
   const [galleryUploading, setGalleryUploading] = useState<GalleryImageSlot | null>(null);
@@ -398,23 +408,77 @@ function AdminPage({
   } | null>(null);
 
   useEffect(() => {
-    const refreshOrders = () => setAppointments(readOrders());
-    refreshOrders();
-    setOrdersReady(true);
-    window.addEventListener("storage", refreshOrders);
-    window.addEventListener(ORDERS_UPDATED_EVENT, refreshOrders);
-    return () => {
-      window.removeEventListener("storage", refreshOrders);
-      window.removeEventListener(ORDERS_UPDATED_EVENT, refreshOrders);
-    };
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    setNotificationsEnabled(
+      window.localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) === "true" &&
+        Notification.permission === "granted",
+    );
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const refreshOrders = async (showNotifications = true) => {
+      const remoteOrders = await fetchOrders(authSession.access_token);
+      const nextOrders = remoteOrders ?? readOrders();
+      if (!active) return;
+
+      if (
+        showNotifications &&
+        ordersInitialized.current &&
+        notificationsEnabled &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        const newOrders = nextOrders.filter(
+          (order) => order.status === "new" && !knownOrderIds.current.has(order.id),
+        );
+        for (const order of newOrders) {
+          const notification = new Notification(`Новая запись: ${order.pet}`, {
+            body: `${order.owner} · ${order.date?.split("-").reverse().join(".") || "дата не указана"} в ${order.time}`,
+            icon: new URL("icon-192.png", document.baseURI).toString(),
+            tag: `lucky-order-${order.id}`,
+          });
+          notification.onclick = () => {
+            window.focus();
+            window.location.hash = "appointments";
+            notification.close();
+          };
+        }
+      }
+
+      knownOrderIds.current = new Set(nextOrders.map((order) => order.id));
+      ordersInitialized.current = true;
+      setAppointments(nextOrders);
+      setOrdersReady(true);
+    };
+
+    const syncAndRefresh = async () => {
+      try {
+        await syncLocalOrdersToRemote(authSession.access_token);
+      } catch {
+        toast.error("Не удалось перенести локальные записи в общую базу");
+      }
+      await refreshOrders(false);
+    };
+
+    void syncAndRefresh();
+    const timer = window.setInterval(() => void refreshOrders(true), 15_000);
+    const refreshOnFocus = () => void refreshOrders(true);
+    window.addEventListener("focus", refreshOnFocus);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshOnFocus);
+    };
+  }, [authSession.access_token, notificationsEnabled]);
 
   const orderStats = useMemo(() => {
     return [
       {
         label: "Всего заявок",
         value: appointments.length,
-        note: "Сохранено на этом устройстве",
+        note: "Общая база Supabase",
         icon: CalendarDays,
       },
       {
@@ -526,16 +590,40 @@ function AdminPage({
     return () => window.removeEventListener("hashchange", syncSettingsView);
   }, []);
 
-  const showCallReminders = () => {
-    const pendingCalls = appointments.filter((order) => order.status === "new").length;
-    setQuery("");
-    setFilter("new");
-    document.getElementById("appointments")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    if (pendingCalls) {
-      toast.success(`Нужно позвонить: ${pendingCalls}`);
-    } else {
-      toast.success("Нет заявок, ожидающих звонка");
+  const enableNotifications = async () => {
+    if (!("Notification" in window)) {
+      toast.error("Эта версия браузера не поддерживает системные уведомления");
+      return;
     }
+
+    const permission =
+      Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      window.localStorage.removeItem(NOTIFICATIONS_STORAGE_KEY);
+      setNotificationsEnabled(false);
+      toast.error("Разрешите уведомления в настройках браузера или Windows");
+      return;
+    }
+
+    window.localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, "true");
+    setNotificationsEnabled(true);
+    const notification = new Notification(
+      notificationsEnabled ? "Уведомления работают" : "Уведомления «Лакки» включены",
+      {
+        body: "Новые записи появятся здесь в течение 15 секунд.",
+        icon: new URL("icon-192.png", document.baseURI).toString(),
+        tag: "lucky-notifications-test",
+      },
+    );
+    notification.onclick = () => {
+      window.focus();
+      window.location.hash = "appointments";
+      notification.close();
+    };
+    toast.success("Системные уведомления включены");
   };
 
   const visibleAppointments = useMemo(() => {
@@ -552,7 +640,7 @@ function AdminPage({
     });
   }, [appointments, filter, query]);
 
-  const changeStatus = (order: Order) => {
+  const changeStatus = async (order: Order) => {
     if (order.status === "new") {
       setCallChecked(false);
       setConfirmingOrder(order);
@@ -562,37 +650,51 @@ function AdminPage({
       toast("Запись уже завершена");
       return;
     }
-    setAppointments((items) =>
-      items.map((item) =>
-        item.id === order.id ? { ...item, status: NEXT_STATUS[item.status] } : item,
-      ),
-    );
-    toast.success("Статус записи обновлён");
+
+    const nextStatus = NEXT_STATUS[order.status];
+    try {
+      await updateOrderStatusRemote(order.id, nextStatus, authSession.access_token);
+      setAppointments((items) =>
+        items.map((item) => (item.id === order.id ? { ...item, status: nextStatus } : item)),
+      );
+      toast.success("Статус записи обновлён");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось обновить статус записи");
+    }
   };
 
-  const confirmAfterCall = () => {
+  const confirmAfterCall = async () => {
     if (!confirmingOrder || !callChecked) return;
-    setAppointments((items) =>
-      items.map((item) =>
-        item.id === confirmingOrder.id ? { ...item, status: "confirmed" } : item,
-      ),
-    );
-    toast.success(`${confirmingOrder.pet}: запись подтверждена после звонка`);
-    setConfirmingOrder(null);
-    setCallChecked(false);
-  };
-
-  const deleteAppointment = () => {
-    if (!deletingOrder) return;
-    const nextAppointments = appointments.filter((item) => item.id !== deletingOrder.id);
-    setAppointments(nextAppointments);
-    writeOrders(nextAppointments);
-    if (confirmingOrder?.id === deletingOrder.id) {
+    try {
+      await updateOrderStatusRemote(confirmingOrder.id, "confirmed", authSession.access_token);
+      setAppointments((items) =>
+        items.map((item) =>
+          item.id === confirmingOrder.id ? { ...item, status: "confirmed" } : item,
+        ),
+      );
+      toast.success(`${confirmingOrder.pet}: запись подтверждена после звонка`);
       setConfirmingOrder(null);
       setCallChecked(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось подтвердить запись");
     }
-    toast.success(`Запись для ${deletingOrder.pet} удалена`);
-    setDeletingOrder(null);
+  };
+
+  const deleteAppointment = async () => {
+    if (!deletingOrder) return;
+    try {
+      await deleteOrderRemote(deletingOrder.id, authSession.access_token);
+      const nextAppointments = appointments.filter((item) => item.id !== deletingOrder.id);
+      setAppointments(nextAppointments);
+      if (confirmingOrder?.id === deletingOrder.id) {
+        setConfirmingOrder(null);
+        setCallChecked(false);
+      }
+      toast.success(`Запись для ${deletingOrder.pet} удалена`);
+      setDeletingOrder(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить запись");
+    }
   };
 
   const saveBookingWindow = () => {
@@ -606,9 +708,10 @@ function AdminPage({
     toast.success(`Запись открыта на ${advanceDays} дней вперёд`);
   };
 
-  const addAppointment = (event: FormEvent<HTMLFormElement>) => {
+  const addAppointment = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const pet = String(data.get("pet") || "Новый питомец");
     const date = String(data.get("date") || "");
     const time = String(data.get("time") || "18:00");
@@ -624,35 +727,40 @@ function AdminPage({
       toast.error("Выберите время в пределах рабочего дня: с 10:00 до 20:00.");
       return;
     }
-    if (isTimeSlotTaken(appointments, date, time)) {
-      toast.error("Это время уже занято. Выберите другую дату или время.");
-      return;
+
+    try {
+      if (await isTimeSlotTakenRemote(date, time)) {
+        toast.error("Это время уже занято. Выберите другую дату или время.");
+        return;
+      }
+
+      const order: Order = {
+        id: Date.now(),
+        time,
+        owner: String(data.get("owner") || "Новый клиент"),
+        pet,
+        breed: String(data.get("breed") || "Порода не указана"),
+        service: String(data.get("service") || "Комплексный груминг"),
+        price: Number(data.get("price")) || 3500,
+        status: "new",
+        phone: String(data.get("phone") || "Телефон не указан"),
+        date,
+        source: "admin",
+        createdAt: new Date().toISOString(),
+      };
+      await appendOrder(order, authSession.access_token);
+      setAppointments((items) =>
+        [...items.filter((item) => item.id !== order.id), order].sort((a, b) => {
+          const dateResult = (a.date || "").localeCompare(b.date || "");
+          return dateResult || a.time.localeCompare(b.time);
+        }),
+      );
+      setShowNew(false);
+      form.reset();
+      toast.success(`${pet}: запись добавлена`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось добавить запись");
     }
-    setAppointments((items) =>
-      [
-        ...items,
-        {
-          id: Date.now(),
-          time,
-          owner: String(data.get("owner") || "Новый клиент"),
-          pet,
-          breed: String(data.get("breed") || "Порода не указана"),
-          service: String(data.get("service") || "Комплексный груминг"),
-          price: Number(data.get("price")) || 3500,
-          status: "new",
-          phone: String(data.get("phone") || "Телефон не указан"),
-          date,
-          source: "admin",
-          createdAt: new Date().toISOString(),
-        },
-      ].sort((a, b) => {
-        const dateResult = (a.date || "").localeCompare(b.date || "");
-        return dateResult || a.time.localeCompare(b.time);
-      }),
-    );
-    setShowNew(false);
-    event.currentTarget.reset();
-    toast.success(`${pet}: запись добавлена`);
   };
 
   const changeGalleryImage = async (
@@ -829,11 +937,19 @@ function AdminPage({
               <p className="text-[11px] text-white/40">Колпино</p>
             </div>
             <button
-              onClick={showCallReminders}
-              className="relative ml-3 grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-white/[.04] text-white/60 transition hover:text-white"
-              aria-label="Уведомления"
+              onClick={() => void enableNotifications()}
+              className={`relative ml-3 grid h-11 w-11 place-items-center rounded-2xl border transition ${
+                notificationsEnabled
+                  ? "border-emerald-300/25 bg-emerald-300/[.08] text-emerald-200"
+                  : "border-white/10 bg-white/[.04] text-white/60 hover:text-white"
+              }`}
+              aria-label={notificationsEnabled ? "Проверить уведомления" : "Включить уведомления"}
+              title={notificationsEnabled ? "Уведомления включены — нажмите для проверки" : "Включить системные уведомления"}
             >
               <Bell className="h-[18px] w-[18px]" />
+              {notificationsEnabled && (
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,.8)]" />
+              )}
             </button>
             <a
               href={WINDOWS_APP_DOWNLOAD_URL}
@@ -863,7 +979,7 @@ function AdminPage({
               <h1 className="font-display text-4xl font-semibold sm:text-5xl">
                 Панель администратора
               </h1>
-              <p className="mt-2 text-sm text-white/45">Только данные из сохранённых заявок.</p>
+              <p className="mt-2 text-sm text-white/45">Актуальные данные из общей базы Supabase.</p>
             </div>
             <div
               className={`flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs ${
@@ -905,7 +1021,7 @@ function AdminPage({
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 p-5 sm:p-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="font-sans text-lg font-semibold">Все сохранённые записи</h2>
+                    <h2 className="font-sans text-lg font-semibold">Все записи</h2>
                     <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/55">
                       {appointments.length} записей
                     </span>
@@ -1099,7 +1215,7 @@ function AdminPage({
               <div>
                 <h2 className="font-sans text-base font-semibold">Сводка по заявкам</h2>
                 <p className="mt-1 text-xs text-white/35">
-                  Рассчитано по данным, сохранённым в этом браузере
+                  Рассчитано по общей базе записей
                 </p>
               </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -1141,89 +1257,8 @@ function AdminPage({
                 Открыть отзывы на Яндекс Картах <ArrowUpRight className="h-4 w-4" />
               </a>
             </Panel>
-          </div>
-        </div>
-      </main>
 
-      {settingsOpen && (
-        <section className="admin-scrollbar fixed inset-y-0 right-0 z-[60] overflow-y-auto bg-[#090909] lg:left-[284px]">
-          <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
-            <div>
-              <p className="text-[10px] uppercase tracking-[.22em] text-white/35">
-                Панель администратора
-              </p>
-              <h1 className="font-display text-2xl font-semibold">Настройки</h1>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                window.location.hash = "overview";
-                setSettingsOpen(false);
-              }}
-              className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 text-white/55 transition hover:bg-white/10 hover:text-white"
-              aria-label="Закрыть настройки"
-              title="Вернуться к обзору"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div id="settings" className="mx-auto max-w-4xl px-4 py-8 sm:px-7 lg:px-9 lg:py-10">
-            <div className="mb-7">
-              <p className="text-xs uppercase tracking-[.2em] text-white/35">
-                Настройки / Онлайн-запись
-              </p>
-              <h2 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">
-                Параметры салона
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
-                Управляйте онлайн-записью и фотографиями галереи на основном сайте.
-              </p>
-            </div>
-
-            <Panel className="p-5 sm:p-7">
-              <div className="flex items-start gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
-                  <CalendarDays className="h-5 w-5 text-white/65" />
-                </div>
-                <div>
-                  <h3 className="font-sans text-base font-semibold">Глубина онлайн-записи</h3>
-                  <p className="mt-1 text-xs leading-5 text-white/40">
-                    По умолчанию клиент может выбрать дату максимум на 14 дней вперёд.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-end gap-3 border-t border-white/10 pt-6">
-                <label className="block">
-                  <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
-                    Дней вперёд
-                  </span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="365"
-                    step="1"
-                    value={advanceDaysDraft}
-                    onChange={(event) => setAdvanceDaysDraft(event.target.value)}
-                    className="h-12 w-32 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm outline-none focus:border-white/30"
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={saveBookingWindow}
-                  className="h-12 rounded-2xl bg-white px-5 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
-                >
-                  Сохранить изменения
-                </button>
-              </div>
-              <p className="mt-4 text-[11px] leading-5 text-white/35">
-                Допустимое значение: от 1 до 365 дней. Настройка применяется к форме на сайте и к
-                ручному добавлению записи.
-              </p>
-            </Panel>
-
-            <Panel className="mt-4 p-5 sm:p-7">
+            <Panel id="gallery-admin" className="overflow-hidden p-5 sm:p-7 lg:col-span-3">
               <div className="flex items-start gap-4">
                 <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
                   <Upload className="h-5 w-5 text-white/65" />
@@ -1231,7 +1266,7 @@ function AdminPage({
                 <div>
                   <h3 className="font-sans text-base font-semibold">Фотографии галереи</h3>
                   <p className="mt-1 text-xs leading-5 text-white/40">
-                    Замените любую из трёх фотографий. Изменение сразу появится на основном сайте.
+                    Замените любую из трёх фотографий — изменения сразу появятся в галерее основного сайта.
                   </p>
                 </div>
               </div>
@@ -1284,6 +1319,89 @@ function AdminPage({
                 Поддерживаются JPG, PNG и WebP размером до 8 МБ.
               </p>
             </Panel>
+          </div>
+        </div>
+      </main>
+
+      {settingsOpen && (
+        <section className="admin-scrollbar fixed inset-y-0 right-0 z-[60] overflow-y-auto bg-[#090909] lg:left-[284px]">
+          <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
+            <div>
+              <p className="text-[10px] uppercase tracking-[.22em] text-white/35">
+                Панель администратора
+              </p>
+              <h1 className="font-display text-2xl font-semibold">Настройки</h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.hash = "overview";
+                setSettingsOpen(false);
+              }}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 text-white/55 transition hover:bg-white/10 hover:text-white"
+              aria-label="Закрыть настройки"
+              title="Вернуться к обзору"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div id="settings" className="mx-auto max-w-4xl px-4 py-8 sm:px-7 lg:px-9 lg:py-10">
+            <div className="mb-7">
+              <p className="text-xs uppercase tracking-[.2em] text-white/35">
+                Настройки / Онлайн-запись
+              </p>
+              <h2 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">
+                Параметры салона
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
+                Управляйте глубиной онлайн-записи на основном сайте.
+              </p>
+            </div>
+
+            <Panel className="p-5 sm:p-7">
+              <div className="flex items-start gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
+                  <CalendarDays className="h-5 w-5 text-white/65" />
+                </div>
+                <div>
+                  <h3 className="font-sans text-base font-semibold">Глубина онлайн-записи</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/40">
+                    По умолчанию клиент может выбрать дату максимум на 14 дней вперёд.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-end gap-3 border-t border-white/10 pt-6">
+                <label className="block">
+                  <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                    Дней вперёд
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    step="1"
+                    value={advanceDaysDraft}
+                    onChange={(event) => setAdvanceDaysDraft(event.target.value)}
+                    className="h-12 w-32 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm outline-none focus:border-white/30"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={saveBookingWindow}
+                  className="h-12 rounded-2xl bg-white px-5 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
+                >
+                  Сохранить изменения
+                </button>
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-white/35">
+                Допустимое значение: от 1 до 365 дней. Настройка применяется к форме на сайте и к
+                ручному добавлению записи.
+              </p>
+            </Panel>
+
+            
 
             <Panel className="mt-4 p-5 sm:p-7">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -1314,9 +1432,9 @@ function AdminPage({
                 <PawPrint className="h-5 w-5 text-white/65" />
               </div>
               <div>
-                <h3 className="font-sans text-sm font-semibold">Локальное хранение данных</h3>
+                <h3 className="font-sans text-sm font-semibold">Общая база данных</h3>
                 <p className="mt-1 text-[11px] leading-5 text-white/35">
-                  Заявки хранятся в этом браузере. Услуги и фотографии сайта синхронизируются через Supabase.
+                  Заявки, услуги и фотографии сайта синхронизируются через Supabase.
                 </p>
               </div>
             </Panel>
@@ -1572,7 +1690,7 @@ function AdminPage({
             </div>
 
             <p className="mt-4 text-xs leading-5 text-red-100/65">
-              Запись будет удалена из этого браузера. Отменить это действие после подтверждения
+              Запись будет удалена из общей базы. Отменить это действие после подтверждения
               нельзя.
             </p>
 
