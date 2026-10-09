@@ -43,9 +43,9 @@ const NAV = [
   ["Главная", "#home"],
   ["Услуги", "#services"],
   ["О нас", "#about"],
-  ["Галерея", "#gallery"],
   ["Отзывы", "#reviews"],
   ["Контакты", "#contacts"],
+  ["Галерея", "#gallery"],
 ] as const;
 
 function Paw({ className = "" }: { className?: string }) {
@@ -809,10 +809,10 @@ function Index() {
       <Services />
       <About />
       <Why />
-      <Gallery />
       <Reviews />
       <Booking />
       <Contacts />
+      <Gallery />
       <Footer />
       <Toaster />
     </main>
