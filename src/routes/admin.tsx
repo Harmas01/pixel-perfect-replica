@@ -61,6 +61,9 @@ import {
   type AdminAuthSession,
 } from "@/lib/admin-auth";
 
+const WINDOWS_APP_DOWNLOAD_URL =
+  "https://github.com/Harmas01/pixel-perfect-replica/releases/download/windows-app-latest/LuckyAdmin.exe";
+
 export const Route = createFileRoute("/admin")({
   head: () => ({
     meta: [
@@ -128,11 +131,6 @@ export function getWorkdayStatus(now = new Date()) {
     text: `Салон закрыт · до открытия ${formatRemainingMinutes(untilOpening)}`,
   };
 }
-
-type InstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
 
 function orderMeta(order: Order) {
   const date = order.date ? order.date.split("-").reverse().join(".") : "Дата не указана";
@@ -373,8 +371,6 @@ function AdminPage({
   const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
   const [callChecked, setCallChecked] = useState(false);
   const [ordersReady, setOrdersReady] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
-  const [standalone, setStandalone] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
   const [bookingDateBounds, setBookingDateBounds] = useState<{
@@ -470,53 +466,11 @@ function AdminPage({
   }, [appointments, ordersReady]);
 
   useEffect(() => {
-    const displayMode = window.matchMedia("(display-mode: standalone)");
-    const syncStandalone = () => setStandalone(displayMode.matches);
-    const capturePrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as InstallPromptEvent);
-    };
-    const handleInstalled = () => {
-      setStandalone(true);
-      setInstallPrompt(null);
-      toast.success("Приложение «Лакки» установлено в Windows");
-    };
-
-    syncStandalone();
-    displayMode.addEventListener("change", syncStandalone);
-    window.addEventListener("beforeinstallprompt", capturePrompt);
-    window.addEventListener("appinstalled", handleInstalled);
-    return () => {
-      displayMode.removeEventListener("change", syncStandalone);
-      window.removeEventListener("beforeinstallprompt", capturePrompt);
-      window.removeEventListener("appinstalled", handleInstalled);
-    };
-  }, []);
-
-  useEffect(() => {
     const syncSettingsView = () => setSettingsOpen(window.location.hash === "#settings");
     syncSettingsView();
     window.addEventListener("hashchange", syncSettingsView);
     return () => window.removeEventListener("hashchange", syncSettingsView);
   }, []);
-
-  const installApplication = async () => {
-    if (standalone) {
-      toast.success("Приложение уже установлено");
-      return;
-    }
-    if (!installPrompt) {
-      toast("В Edge откройте меню ⋯ → Приложения → Установить «Лакки — заказы»");
-      return;
-    }
-    await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice.outcome === "accepted") {
-      setStandalone(true);
-      setInstallPrompt(null);
-      toast.success("Приложение установлено");
-    }
-  };
 
   const showCallReminders = () => {
     const pendingCalls = appointments.filter((order) => order.status === "new").length;
@@ -794,14 +748,15 @@ function AdminPage({
             >
               <Bell className="h-[18px] w-[18px]" />
             </button>
-            <button
-              onClick={installApplication}
+            <a
+              href={WINDOWS_APP_DOWNLOAD_URL}
+              download="LuckyAdmin.exe"
               className="hidden h-11 items-center gap-2 rounded-2xl border border-white/10 px-3.5 text-xs text-white/60 transition hover:bg-white/10 hover:text-white md:flex"
-              title={standalone ? "Приложение уже установлено" : "Установить как приложение Windows 11"}
+              title="Скачать приложение для Windows 11"
             >
-              {standalone ? <CircleCheck className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-              {standalone ? "Приложение" : "Установить"}
-            </button>
+              <Download className="h-4 w-4" />
+              Скачать EXE
+            </a>
             <button
               onClick={() => setShowNew(true)}
               className="flex h-11 items-center gap-2 rounded-2xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.18)]"
@@ -1175,44 +1130,24 @@ function AdminPage({
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-4">
                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-sky-300/[.09] text-sky-200">
-                    {standalone ? (
-                      <CircleCheck className="h-5 w-5" />
-                    ) : (
-                      <Download className="h-5 w-5" />
-                    )}
+                    <Download className="h-5 w-5" />
                   </div>
                   <div>
                     <h3 className="font-sans text-base font-semibold">Приложение для Windows 11</h3>
                     <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">
-                      {standalone
-                        ? "Админ-панель запущена как отдельное приложение. Её можно открыть через меню «Пуск» или ярлык на рабочем столе."
-                        : "Установите админ-панель на компьютер: она будет открываться в отдельном окне без вкладок браузера и появится в меню «Пуск»."}
+                      Скачайте LuckyAdmin.exe. После запуска защищённая админ-панель откроется
+                      в отдельном окне Windows без обычных вкладок браузера.
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={installApplication}
-                  disabled={standalone}
-                  className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)] disabled:cursor-default disabled:bg-emerald-200 disabled:text-emerald-950"
+                <a
+                  href={WINDOWS_APP_DOWNLOAD_URL}
+                  download="LuckyAdmin.exe"
+                  className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
                 >
-                  {standalone ? (
-                    <>
-                      <CircleCheck className="h-4 w-4" /> Установлено
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4" /> Установить
-                    </>
-                  )}
-                </button>
+                  <Download className="h-4 w-4" /> Скачать EXE
+                </a>
               </div>
-              {!standalone && (
-                <p className="mt-4 border-t border-white/10 pt-4 text-[11px] leading-5 text-white/35">
-                  Если системное окно не открылось, в Microsoft Edge выберите ⋯ → Приложения →
-                  Установить «Лакки — администратор».
-                </p>
-              )}
             </Panel>
 
             <Panel className="mt-4 flex items-center gap-4 p-5 sm:p-7">

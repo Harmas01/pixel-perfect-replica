@@ -42,6 +42,7 @@ const NAV = [
   ["Главная", "#home"],
   ["Услуги", "#services"],
   ["О нас", "#about"],
+  ["Галерея", "#gallery"],
   ["Отзывы", "#reviews"],
   ["Контакты", "#contacts"],
 ] as const;
@@ -436,6 +437,58 @@ function Why() {
   );
 }
 
+function Gallery() {
+  const photos = [
+    {
+      src: heroDog,
+      alt: "Ухоженный французский бульдог после груминга в салоне Лакки",
+      label: "Бережный уход",
+      className: "md:col-span-2 md:row-span-2",
+      imageClassName: "object-cover object-[70%_center]",
+    },
+    {
+      src: aboutImg,
+      alt: "Грумер салона Лакки во время работы",
+      label: "Забота в каждой детали",
+      className: "",
+      imageClassName: "object-cover",
+    },
+    {
+      src: logo,
+      alt: "Логотип салона груминга Лакки",
+      label: "Салон «Лакки»",
+      className: "",
+      imageClassName: "object-contain p-10",
+    },
+  ];
+
+  return (
+    <section id="gallery" className="mx-auto max-w-7xl scroll-mt-20 px-5 py-28 md:px-8">
+      <SectionTitle eyebrow="наша атмосфера" title="Галерея «Лакки»" />
+      <div className="grid auto-rows-[280px] gap-4 md:grid-cols-3 md:auto-rows-[240px]">
+        {photos.map((photo, index) => (
+          <figure
+            key={photo.label}
+            className={`reveal group relative overflow-hidden rounded-[1.6rem] border border-border bg-card ${photo.className}`}
+            style={{ transitionDelay: `${index * 90}ms` }}
+          >
+            <img
+              src={photo.src}
+              alt={photo.alt}
+              loading="lazy"
+              className={`h-full w-full transition duration-700 group-hover:scale-[1.03] ${photo.imageClassName}`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+            <figcaption className="absolute bottom-0 left-0 p-6 text-sm uppercase tracking-[0.2em] text-white">
+              {photo.label}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Reviews() {
   const [showMore, setShowMore] = useState(false);
 
@@ -729,6 +782,7 @@ function Index() {
       <Services />
       <About />
       <Why />
+      <Gallery />
       <Reviews />
       <Booking />
       <Contacts />
