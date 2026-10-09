@@ -167,7 +167,7 @@ const ADVANTAGES = [
   "Собаки всех пород и размеров",
 ];
 
-const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/81119680356?comments";
+const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/184039255742?comments";
 
 function useReveal() {
   useEffect(() => {
@@ -503,6 +503,11 @@ function Booking() {
       return;
     }
 
+    if (time < "10:00" || time > "20:00") {
+      toast.error("Выберите время в пределах рабочего дня: с 10:00 до 20:00.");
+      return;
+    }
+
     if (isTimeSlotTaken(readOrders(), date, time)) {
       toast.error("Это время уже занято. Выберите другую дату или время.");
       return;
@@ -606,7 +611,15 @@ function Booking() {
           </label>
           <label>
             <L>Желаемое время</L>
-            <input name="time" required type="time" className="field [color-scheme:dark]" />
+            <input
+              name="time"
+              required
+              type="time"
+              min="10:00"
+              max="20:00"
+              step="1800"
+              className="field [color-scheme:dark]"
+            />
           </label>
           <label className="sm:col-span-2">
             <L>Дополнительные пожелания</L>
@@ -631,7 +644,7 @@ function Contacts() {
     ["Телефон", "+7 (900) 123-45-67"],
     ["WhatsApp / Telegram", "@lucky_grooming"],
     ["Адрес", "ул. Тазаева, 3, Колпино"],
-    ["Часы работы", "Ежедневно 10:00 – 21:00"],
+    ["Часы работы", "Ежедневно 10:00 – 20:00"],
   ];
   return (
     <section id="contacts" className="mx-auto max-w-7xl px-5 py-28 md:px-8">

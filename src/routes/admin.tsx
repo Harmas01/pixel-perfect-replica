@@ -112,7 +112,7 @@ function formatRemainingMinutes(totalMinutes: number) {
 export function getWorkdayStatus(now = new Date()) {
   const minutesNow = now.getHours() * 60 + now.getMinutes();
   const opening = 10 * 60;
-  const closing = 21 * 60;
+  const closing = 20 * 60;
 
   if (minutesNow >= opening && minutesNow < closing) {
     return {
@@ -612,6 +612,10 @@ function AdminPage({
       );
       return;
     }
+    if (time < "10:00" || time > "20:00") {
+      toast.error("Выберите время в пределах рабочего дня: с 10:00 до 20:00.");
+      return;
+    }
     if (isTimeSlotTaken(appointments, date, time)) {
       toast.error("Это время уже занято. Выберите другую дату или время.");
       return;
@@ -831,7 +835,7 @@ function AdminPage({
                   workdayStatus.isOpen ? "bg-emerald-300" : "bg-red-400"
                 }`}
               />
-              <span>Часы работы: 10:00–21:00 · {workdayStatus.text}</span>
+              <span>Часы работы: 10:00–20:00 · {workdayStatus.text}</span>
             </div>
           </div>
 
@@ -1077,7 +1081,7 @@ function AdminPage({
                 <Star className="h-5 w-5 shrink-0 text-amber-200" />
               </div>
               <a
-                href="https://yandex.ru/maps/org/lakki/81119680356/reviews"
+                href="https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8"
                 target="_blank"
                 rel="noreferrer"
                 className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
@@ -1284,7 +1288,16 @@ function AdminPage({
                 />
               </AdminField>
               <AdminField label="Время">
-                <input name="time" required type="time" defaultValue="18:00" className="field" />
+                <input
+                  name="time"
+                  required
+                  type="time"
+                  min="10:00"
+                  max="20:00"
+                  step="1800"
+                  defaultValue="18:00"
+                  className="field"
+                />
               </AdminField>
               <AdminField label="Стоимость">
                 <input
