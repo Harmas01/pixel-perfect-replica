@@ -170,9 +170,6 @@ const ADVANTAGES = [
 
 const YANDEX_REVIEWS_WIDGET_URL =
   "https://yandex.ru/maps-reviews-widget/184039255742?comments";
-const YANDEX_REVIEWS_URL =
-  "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
-
 function useReveal() {
   useEffect(() => {
     const els = document.querySelectorAll(".reveal");
@@ -571,7 +568,7 @@ function Reviews() {
           className={`block w-full border-0 bg-white transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
         />
       </div>
-      <div className="mt-7 flex flex-wrap justify-center gap-3">
+      <div className="mt-7 flex justify-center">
         <button
           type="button"
           className="btn-solid"
@@ -581,14 +578,6 @@ function Reviews() {
         >
           {showMore ? "Свернуть отзывы ↑" : "Посмотреть больше отзывов ↓"}
         </button>
-        <a
-          href={YANDEX_REVIEWS_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="btn-outline"
-        >
-          Открыть на Яндекс Картах ↗
-        </a>
       </div>
     </section>
   );
