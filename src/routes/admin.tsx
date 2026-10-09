@@ -500,6 +500,13 @@ function AdminLogin({
           </form>
         ) : (
           <form onSubmit={submitCode} className="mt-7 space-y-4">
+            <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs leading-5 text-white/55">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+              <p>
+                Письмо с кодом придёт от <span className="font-semibold text-white/75">Supabase Auth</span>
+                {" "}с адреса noreply@mail.app.supabase.io. Проверьте также папку «Спам».
+              </p>
+            </div>
             <label className="block">
               <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
                 Код подтверждения
