@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { appendOrder, isTimeSlotTaken, readOrders } from "@/lib/orders";
 import {
   DEFAULT_SALON_SERVICES,
+  fetchSalonServices,
   readSalonServices,
   SERVICES_UPDATED_EVENT,
   type SalonService,
@@ -189,11 +190,19 @@ function useSalonServices() {
   const [services, setServices] = useState<SalonService[]>(DEFAULT_SALON_SERVICES);
 
   useEffect(() => {
-    const refreshServices = () => setServices(readSalonServices());
+    let active = true;
+    const refreshServices = () => {
+      setServices(readSalonServices());
+      void fetchSalonServices().then((remoteServices) => {
+        if (active && remoteServices) setServices(remoteServices);
+      });
+    };
+
     refreshServices();
     window.addEventListener("storage", refreshServices);
     window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
     return () => {
+      active = false;
       window.removeEventListener("storage", refreshServices);
       window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
     };

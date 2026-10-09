@@ -1,4 +1,4 @@
-const CACHE_NAME = "lucky-admin-v8";
+const CACHE_NAME = "lucky-admin-v9";
 const APP_SHELL = ["admin", "manifest.webmanifest", "icon-192.png", "icon-512.png"].map(
   (path) => new URL(path, self.registration.scope).toString(),
 );

@@ -41,8 +41,10 @@ import {
   appendCustomService,
   DEFAULT_SALON_SERVICES,
   deleteSalonService,
+  fetchSalonServices,
   readSalonServices,
   SERVICES_UPDATED_EVENT,
+  syncLocalServiceChanges,
   type SalonService,
 } from "@/lib/services";
 import {
@@ -418,15 +420,32 @@ function AdminPage({
   );
 
   useEffect(() => {
-    const refreshServices = () => setSalonServices(readSalonServices());
-    refreshServices();
-    window.addEventListener("storage", refreshServices);
-    window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
-    return () => {
-      window.removeEventListener("storage", refreshServices);
-      window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
+    let active = true;
+
+    const refreshServices = async () => {
+      const remoteServices = await fetchSalonServices();
+      if (active) setSalonServices(remoteServices ?? readSalonServices());
     };
-  }, []);
+    const handleServicesChange = () => void refreshServices();
+    const syncAndRefresh = async () => {
+      try {
+        await syncLocalServiceChanges(authSession.access_token);
+      } catch {
+        toast.error("Не удалось синхронизировать услуги с сайтом");
+      }
+      await refreshServices();
+    };
+
+    setSalonServices(readSalonServices());
+    void syncAndRefresh();
+    window.addEventListener("storage", handleServicesChange);
+    window.addEventListener(SERVICES_UPDATED_EVENT, handleServicesChange);
+    return () => {
+      active = false;
+      window.removeEventListener("storage", handleServicesChange);
+      window.removeEventListener(SERVICES_UPDATED_EVENT, handleServicesChange);
+    };
+  }, [authSession.access_token]);
 
   useEffect(() => {
     const refreshBookingSettings = () => {
@@ -601,23 +620,33 @@ function AdminPage({
     toast.success(`${pet}: запись добавлена`);
   };
 
-  const addService = (event: FormEvent<HTMLFormElement>) => {
+  const addService = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const data = new FormData(form);
     const name = String(data.get("name") || "").trim();
     if (!name) return;
 
-    appendCustomService({
-      id: Date.now(),
-      name,
-      duration: Number(data.get("duration")) || 60,
-      price: Number(data.get("price")) || 0,
-      active: true,
-      createdAt: new Date().toISOString(),
-    });
-    setShowServiceForm(false);
-    event.currentTarget.reset();
-    toast.success(`Услуга «${name}» добавлена`);
+    try {
+      await appendCustomService(
+        {
+          id: Date.now(),
+          name,
+          duration: Number(data.get("duration")) || 60,
+          price: Number(data.get("price")) || 0,
+          active: true,
+          createdAt: new Date().toISOString(),
+        },
+        authSession.access_token,
+      );
+      const remoteServices = await fetchSalonServices();
+      setSalonServices(remoteServices ?? readSalonServices());
+      setShowServiceForm(false);
+      form.reset();
+      toast.success(`Услуга «${name}» добавлена на сайт`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось добавить услугу");
+    }
   };
 
   return (
@@ -981,9 +1010,17 @@ function AdminPage({
                         </span>
                         <button
                           type="button"
-                          onClick={() => {
-                            deleteSalonService(service.id);
-                            toast.success(`Услуга «${service.name}» удалена`);
+                          onClick={async () => {
+                            try {
+                              await deleteSalonService(service.id, authSession.access_token);
+                              const remoteServices = await fetchSalonServices();
+                              setSalonServices(remoteServices ?? readSalonServices());
+                              toast.success(`Услуга «${service.name}» удалена с сайта`);
+                            } catch (error) {
+                              toast.error(
+                                error instanceof Error ? error.message : "Не удалось удалить услугу",
+                              );
+                            }
                           }}
                           className="grid h-8 w-8 place-items-center rounded-xl border border-red-300/10 text-red-200/60 transition hover:bg-red-300/10 hover:text-red-100"
                           aria-label={`Удалить услугу ${service.name}`}
@@ -1508,7 +1545,7 @@ function AdminPage({
               </AdminField>
             </div>
             <p className="mt-4 text-[11px] leading-5 text-white/35">
-              После сохранения услуга сразу появится в форме записи на сайте на этом устройстве.
+              После сохранения услуга сразу появится на основном сайте у всех посетителей.
             </p>
             <div className="mt-7 flex gap-3">
               <button
