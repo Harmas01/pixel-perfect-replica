@@ -556,25 +556,38 @@ function Gallery() {
 }
 
 function Reviews() {
+  const [showMore, setShowMore] = useState(false);
+
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
       <div className="reveal mx-auto max-w-[800px] overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_24px_80px_rgba(255,255,255,.08)]">
         <iframe
+          id="yandex-reviews-widget"
           title="Свежие отзывы о салоне Лакки на Яндекс Картах"
           src={YANDEX_REVIEWS_WIDGET_URL}
           loading="lazy"
-          className="block h-[680px] w-full border-0 bg-white"
+          scrolling="yes"
+          className={`block w-full border-0 bg-white transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
         />
       </div>
-      <div className="mt-7 flex justify-center">
+      <div className="mt-7 flex flex-wrap justify-center gap-3">
+        <button
+          type="button"
+          className="btn-solid"
+          aria-expanded={showMore}
+          aria-controls="yandex-reviews-widget"
+          onClick={() => setShowMore((value) => !value)}
+        >
+          {showMore ? "Свернуть отзывы ↑" : "Посмотреть больше отзывов ↓"}
+        </button>
         <a
           href={YANDEX_REVIEWS_URL}
           target="_blank"
           rel="noreferrer"
           className="btn-outline"
         >
-          Посмотреть ещё на Яндекс Картах ↗
+          Открыть на Яндекс Картах ↗
         </a>
       </div>
     </section>
