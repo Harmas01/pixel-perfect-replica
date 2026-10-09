@@ -300,7 +300,7 @@ function AdminLogin({
       setResendAvailableAt(Date.now() + 60_000);
       setNow(Date.now());
       setStage("code");
-      toast.success("Код входа отправлен на почту");
+      toast.success("Письмо для входа отправлено на почту");
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : "Не удалось выполнить вход";
       const isInvalidCredentials =
@@ -366,7 +366,7 @@ function AdminLogin({
       await resendAdminLoginCode(verifiedEmail);
       setResendAvailableAt(Date.now() + 60_000);
       setNow(Date.now());
-      toast.success("Новый код отправлен");
+      toast.success("Новое письмо для входа отправлено");
     } catch (authError) {
       setError(
         authError instanceof Error ? authError.message : "Не удалось отправить новый код",
@@ -410,12 +410,12 @@ function AdminLogin({
             )}
           </div>
           <h1 className="mt-5 font-display text-4xl font-semibold">
-            {stage === "credentials" ? "Вход в панель" : "Код из письма"}
+            {stage === "credentials" ? "Вход в панель" : "Подтверждение входа"}
           </h1>
           <p className="mt-2 text-sm leading-6 text-white/40">
             {stage === "credentials"
-              ? "Сначала введите почту администратора и пароль. После проверки мы отправим код на почту."
-              : `Введите шестизначный код, отправленный на ${verifiedEmail}.`}
+              ? "Сначала введите почту администратора и пароль. После проверки мы отправим письмо для входа."
+              : `Откройте письмо, отправленное на ${verifiedEmail}.`}
           </p>
         </div>
 
@@ -503,8 +503,10 @@ function AdminLogin({
             <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs leading-5 text-white/55">
               <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
               <p>
-                Письмо с кодом придёт от <span className="font-semibold text-white/75">Supabase Auth</span>
-                {" "}с адреса noreply@mail.app.supabase.io. Проверьте также папку «Спам».
+                Письмо придёт от <span className="font-semibold text-white/75">Supabase Auth</span>
+                {" "}с адреса noreply@mail.app.supabase.io. Нажмите в письме кнопку{" "}
+                <span className="font-semibold text-white/75">Sign in</span> — она автоматически
+                откроет админ-панель. Если в письме есть шестизначный код, его можно ввести ниже.
               </p>
             </div>
             <label className="block">
@@ -559,7 +561,7 @@ function AdminLogin({
                 onClick={resendCode}
                 className="text-white/55 transition hover:text-white disabled:cursor-not-allowed disabled:text-white/25"
               >
-                {resendSeconds > 0 ? `Отправить снова через ${resendSeconds} сек.` : "Отправить код снова"}
+                {resendSeconds > 0 ? `Отправить снова через ${resendSeconds} сек.` : "Отправить письмо снова"}
               </button>
             </div>
           </form>
