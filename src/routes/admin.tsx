@@ -19,11 +19,9 @@ import {
   PhoneCall,
   Plus,
   Search,
-  Scissors,
   Settings,
   Star,
   Trash2,
-  Users,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -63,6 +61,10 @@ import {
 
 const WINDOWS_APP_DOWNLOAD_URL =
   "https://github.com/Harmas01/pixel-perfect-replica/releases/download/windows-app-latest/LuckyAdmin.exe";
+const YANDEX_REVIEWS_WIDGET_URL =
+  "https://yandex.ru/maps-reviews-widget/184039255742?comments";
+const YANDEX_REVIEWS_URL =
+  "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -97,8 +99,6 @@ const NEXT_STATUS: Record<OrderStatus, OrderStatus> = {
 const NAV = [
   { label: "Обзор", href: "#overview", icon: LayoutDashboard },
   { label: "Записи", href: "#appointments", icon: CalendarDays },
-  { label: "Клиенты", href: "#clients", icon: Users },
-  { label: "Услуги", href: "#services-admin", icon: Scissors },
   { label: "Отзывы", href: "#reviews-admin", icon: Star },
   { label: "Настройки", href: "#settings", icon: Settings },
 ] as const;
@@ -1000,7 +1000,7 @@ function AdminPage({
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <Panel id="clients" className="p-5 sm:p-6 lg:col-span-2">
+            <Panel id="clients" className="p-5 sm:p-6 lg:col-span-3">
               <div>
                 <h2 className="font-sans text-base font-semibold">Сводка по заявкам</h2>
                 <p className="mt-1 text-xs text-white/35">
@@ -1025,23 +1025,32 @@ function AdminPage({
               </div>
             </Panel>
 
-            <Panel id="reviews-admin" className="p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-3">
+            <Panel id="reviews-admin" className="overflow-hidden p-5 sm:p-6 lg:col-span-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 className="font-sans text-base font-semibold">Отзывы на Яндекс Картах</h2>
+                  <h2 className="font-sans text-base font-semibold">
+                    Новые отзывы на Яндекс Картах
+                  </h2>
                   <p className="mt-1 text-xs leading-5 text-white/35">
-                    Актуальный рейтинг, новые отзывы и ответы доступны на странице организации
+                    Виджет открыт сразу и показывает актуальные отзывы карточки салона «Лакки».
                   </p>
                 </div>
                 <Star className="h-5 w-5 shrink-0 text-amber-200" />
               </div>
+              <div className="mt-5 overflow-hidden rounded-2xl bg-white">
+                <iframe
+                  title="Новые отзывы о салоне Лакки на Яндекс Картах"
+                  src={YANDEX_REVIEWS_WIDGET_URL}
+                  className="block h-[980px] w-full border-0"
+                />
+              </div>
               <a
-                href="https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8"
+                href={YANDEX_REVIEWS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-6 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
+                className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
               >
-                Открыть актуальные отзывы <ArrowUpRight className="h-4 w-4" />
+                Открыть все отзывы на Яндекс Картах <ArrowUpRight className="h-4 w-4" />
               </a>
             </Panel>
           </div>

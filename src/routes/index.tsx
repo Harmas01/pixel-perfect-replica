@@ -190,6 +190,7 @@ function useSalonServices() {
 
   useEffect(() => {
     const refreshServices = () => setServices(readSalonServices());
+    refreshServices();
     window.addEventListener("storage", refreshServices);
     window.addEventListener(SERVICES_UPDATED_EVENT, refreshServices);
     return () => {
@@ -341,38 +342,55 @@ function SectionTitle({
 
 function Services() {
   const availableServices = useSalonServices();
-  const availableNames = new Set(availableServices.map((service) => service.name));
-  const visibleServices = SERVICES.filter((service) => availableNames.has(service.t));
+  const visibleServices = availableServices.map((service) => {
+    const preset = SERVICES.find((item) => item.t === service.name);
+    return {
+      id: String(service.id),
+      title: service.name,
+      description:
+        preset?.d ??
+        `Профессиональный уход с учётом особенностей питомца. Продолжительность — ${service.duration} мин.`,
+      price: `от ${service.price.toLocaleString("ru-RU")} ₽`,
+      icon: ICONS[preset?.k ?? "full"],
+    };
+  });
 
   return (
     <section id="services" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="что мы делаем" title="Наши услуги" />
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleServices.map((s, i) => (
+        {visibleServices.map((service, index) => (
           <div
-            key={s.t}
-            style={{ transitionDelay: `${i * 110}ms` }}
+            key={service.id}
+            style={{ transitionDelay: `${index * 110}ms` }}
             className="reveal service-reveal h-full"
           >
             <article className="card-line group flex h-full flex-col p-8 hover:-translate-y-2 hover:border-foreground hover:shadow-glow">
               <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border transition-all duration-500 group-hover:border-foreground group-hover:shadow-glow">
-                {ICONS[s.k]}
+                {service.icon}
               </div>
-              <h3 className="mt-6 text-3xl font-semibold">{s.t}</h3>
-              <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">{s.d}</p>
+              <h3 className="mt-6 text-3xl font-semibold">{service.title}</h3>
+              <p className="mt-3 flex-1 text-sm leading-relaxed text-muted-foreground">
+                {service.description}
+              </p>
               <div className="mt-8 flex items-center justify-between border-t border-line pt-5">
-                <span className="font-display text-xl">{s.p}</span>
+                <span className="font-display text-xl">{service.price}</span>
                 <a
                   href="#booking"
                   className="text-xs uppercase tracking-[0.2em] underline-offset-8 group-hover:underline"
                 >
-                  Записаться →
+                  Записаться
                 </a>
               </div>
             </article>
           </div>
         ))}
       </div>
+      {!visibleServices.length && (
+        <div className="card-line reveal py-14 text-center text-sm text-muted-foreground">
+          Услуги временно недоступны. Пожалуйста, свяжитесь с администратором.
+        </div>
+      )}
     </section>
   );
 }
