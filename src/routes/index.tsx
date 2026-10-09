@@ -172,16 +172,37 @@ const YANDEX_REVIEWS_WIDGET_URL =
   "https://yandex.ru/maps-reviews-widget/184039255742?comments";
 function useReveal() {
   useEffect(() => {
-    const els = document.querySelectorAll(".reveal");
     const io = new IntersectionObserver(
-      (es) =>
-        es.forEach(
-          (e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target)),
-        ),
+      (entries) =>
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }),
       { threshold: 0.12 },
     );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+
+    const observeRevealElements = (root: ParentNode) => {
+      if (root instanceof Element && root.matches(".reveal:not(.in)")) {
+        io.observe(root);
+      }
+      root.querySelectorAll?.(".reveal:not(.in)").forEach((element) => io.observe(element));
+    };
+
+    observeRevealElements(document);
+    const mutationObserver = new MutationObserver((records) => {
+      records.forEach((record) => {
+        record.addedNodes.forEach((node) => {
+          if (node instanceof Element) observeRevealElements(node);
+        });
+      });
+    });
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      mutationObserver.disconnect();
+      io.disconnect();
+    };
   }, []);
 }
 
