@@ -469,6 +469,15 @@ function AdminLogin({
               </span>
             </label>
 
+            <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs leading-5 text-white/55">
+              <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+              <p>
+                Письмо для подтверждения входа придёт от{" "}
+                <span className="font-semibold text-white/75">Supabase Auth</span>
+                {" "}с адреса noreply@mail.app.supabase.io. Проверьте также папку «Спам».
+              </p>
+            </div>
+
             {isLocked ? (
               <div
                 className="rounded-2xl border border-amber-300/20 bg-amber-400/[.08] px-4 py-3 text-xs leading-5 text-amber-100"
@@ -500,12 +509,6 @@ function AdminLogin({
           </form>
         ) : (
           <form onSubmit={submitCode} className="mt-7 space-y-4">
-            <div className="rounded-2xl bg-white px-5 py-4 text-black">
-              <p className="text-[10px] font-semibold uppercase tracking-[.16em] text-black/45">
-                Письмо отправлено на
-              </p>
-              <p className="mt-1 break-all text-base font-semibold">{verifiedEmail}</p>
-            </div>
             <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs leading-5 text-white/55">
               <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
               <p>
