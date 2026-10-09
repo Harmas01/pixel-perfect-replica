@@ -297,15 +297,6 @@ function AdminLogin({
           </button>
         </form>
 
-        <a
-          href="https://supabase.com/dashboard/project/axtqkqicdcbmfobyvjhj/auth/users"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-5 block text-center text-xs text-white/40 underline decoration-white/20 underline-offset-4 transition hover:text-white/70"
-        >
-          Управление администраторами в Supabase
-        </a>
-
         <p className="mt-6 border-t border-white/10 pt-5 text-center text-[10px] leading-5 text-white/25">
           Регистрация через приложение отключена. Доступ разрешён только заранее созданной
           учётной записи.
