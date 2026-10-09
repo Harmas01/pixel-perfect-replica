@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageCircle,
   MoreHorizontal,
   PawPrint,
   PhoneCall,
@@ -17,7 +16,6 @@ import {
   Search,
   Scissors,
   Settings,
-  Sparkles,
   Star,
   Trash2,
   Users,
@@ -171,6 +169,7 @@ function AdminPage() {
   const [ordersReady, setOrdersReady] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [standalone, setStandalone] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
   const [bookingDateBounds, setBookingDateBounds] = useState<{
     min: string;
@@ -274,6 +273,13 @@ function AdminPage() {
     return () => window.removeEventListener("beforeinstallprompt", capturePrompt);
   }, []);
 
+  useEffect(() => {
+    const syncSettingsView = () => setSettingsOpen(window.location.hash === "#settings");
+    syncSettingsView();
+    window.addEventListener("hashchange", syncSettingsView);
+    return () => window.removeEventListener("hashchange", syncSettingsView);
+  }, []);
+
   const installApplication = async () => {
     if (standalone) {
       toast.success("Приложение уже установлено");
@@ -290,14 +296,6 @@ function AdminPage() {
       setInstallPrompt(null);
       toast.success("Приложение установлено");
     }
-  };
-
-  const openClientSearch = () => {
-    setFilter("all");
-    setQuery("");
-    document.getElementById("appointments")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.setTimeout(() => document.getElementById("client-search")?.focus(), 450);
-    toast("Введите имя или телефон клиента в строке поиска");
   };
 
   const showCallReminders = () => {
@@ -479,8 +477,26 @@ function AdminPage() {
             <a
               key={label}
               href={href}
-              onClick={() => setMobileMenu(false)}
-              className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm transition ${index === 0 ? "bg-white text-black" : "text-white/60 hover:bg-white/[.07] hover:text-white"}`}
+              onClick={(event) => {
+                setMobileMenu(false);
+                if (href === "#settings") {
+                  event.preventDefault();
+                  window.location.hash = "settings";
+                  setSettingsOpen(true);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  return;
+                }
+                setSettingsOpen(false);
+                window.setTimeout(
+                  () => document.querySelector(href)?.scrollIntoView({ behavior: "smooth" }),
+                  0,
+                );
+              }}
+              className={`group flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm transition ${
+                (href === "#settings" && settingsOpen) || (index === 0 && !settingsOpen)
+                  ? "bg-white text-black"
+                  : "text-white/60 hover:bg-white/[.07] hover:text-white"
+              }`}
             >
               <Icon className="h-[18px] w-[18px]" />
               <span className="flex-1">{label}</span>
@@ -744,51 +760,6 @@ function AdminPage() {
             </Panel>
 
             <div className="space-y-4">
-              <Panel className="p-5 sm:p-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-sans text-base font-semibold">Быстрые действия</h2>
-                  <Sparkles className="h-4 w-4 text-white/35" />
-                </div>
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowNew(true)}
-                    className="rounded-2xl bg-white p-4 text-left text-black transition hover:-translate-y-0.5"
-                  >
-                    <CalendarDays className="h-5 w-5" />
-                    <p className="mt-5 text-xs font-semibold">Новая запись</p>
-                    <p className="mt-1 text-[10px] text-black/50">Добавить клиента</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openClientSearch}
-                    className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
-                  >
-                    <Users className="h-5 w-5 text-white/65" />
-                    <p className="mt-5 text-xs font-semibold">Клиенты</p>
-                    <p className="mt-1 text-[10px] text-white/35">Поиск по заявкам</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={showCallReminders}
-                    className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
-                  >
-                    <MessageCircle className="h-5 w-5 text-white/65" />
-                    <p className="mt-5 text-xs font-semibold">Напомнить</p>
-                    <p className="mt-1 text-[10px] text-white/35">Ожидают звонка</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={installApplication}
-                    className="rounded-2xl border border-white/10 bg-white/[.035] p-4 text-left transition hover:-translate-y-0.5 hover:bg-white/[.07]"
-                  >
-                    <Download className="h-5 w-5 text-white/65" />
-                    <p className="mt-5 text-xs font-semibold">Приложение</p>
-                    <p className="mt-1 text-[10px] text-white/35">Установить на Windows</p>
-                  </button>
-                </div>
-              </Panel>
-
               <Panel id="services-admin" className="p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -887,48 +858,101 @@ function AdminPage() {
               </a>
             </Panel>
           </div>
+        </div>
+      </main>
 
-          <Panel
-            id="settings"
-            className="mt-4 flex flex-wrap items-center justify-between gap-5 p-5 sm:p-6"
-          >
-            <div className="flex items-center gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.07]">
+      {settingsOpen && (
+        <section className="fixed inset-y-0 right-0 z-[60] overflow-y-auto bg-[#090909] lg:left-[284px]">
+          <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
+            <div>
+              <p className="text-[10px] uppercase tracking-[.22em] text-white/35">
+                Панель администратора
+              </p>
+              <h1 className="font-display text-2xl font-semibold">Настройки</h1>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.hash = "overview";
+                setSettingsOpen(false);
+              }}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 text-white/55 transition hover:bg-white/10 hover:text-white"
+              aria-label="Закрыть настройки"
+              title="Вернуться к обзору"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div id="settings" className="mx-auto max-w-4xl px-4 py-8 sm:px-7 lg:px-9 lg:py-10">
+            <div className="mb-7">
+              <p className="text-xs uppercase tracking-[.2em] text-white/35">
+                Настройки / Онлайн-запись
+              </p>
+              <h2 className="mt-2 font-display text-4xl font-semibold sm:text-5xl">
+                Параметры салона
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/45">
+                Управляйте периодом, на который клиенты могут выбирать дату записи.
+              </p>
+            </div>
+
+            <Panel className="p-5 sm:p-7">
+              <div className="flex items-start gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
+                  <CalendarDays className="h-5 w-5 text-white/65" />
+                </div>
+                <div>
+                  <h3 className="font-sans text-base font-semibold">Глубина онлайн-записи</h3>
+                  <p className="mt-1 text-xs leading-5 text-white/40">
+                    По умолчанию клиент может выбрать дату максимум на 14 дней вперёд.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-end gap-3 border-t border-white/10 pt-6">
+                <label className="block">
+                  <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                    Дней вперёд
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="365"
+                    step="1"
+                    value={advanceDaysDraft}
+                    onChange={(event) => setAdvanceDaysDraft(event.target.value)}
+                    className="h-12 w-32 rounded-2xl border border-white/10 bg-white/[.04] px-4 text-sm outline-none focus:border-white/30"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={saveBookingWindow}
+                  className="h-12 rounded-2xl bg-white px-5 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
+                >
+                  Сохранить изменения
+                </button>
+              </div>
+              <p className="mt-4 text-[11px] leading-5 text-white/35">
+                Допустимое значение: от 1 до 365 дней. Настройка применяется к форме на сайте и к
+                ручному добавлению записи.
+              </p>
+            </Panel>
+
+            <Panel className="mt-4 flex items-center gap-4 p-5 sm:p-7">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
                 <PawPrint className="h-5 w-5 text-white/65" />
               </div>
               <div>
-                <h2 className="font-sans text-sm font-semibold">Глубина онлайн-записи</h2>
-                <p className="mt-1 text-[11px] text-white/35">
-                  По умолчанию клиент может выбрать дату максимум на 14 дней вперёд
+                <h3 className="font-sans text-sm font-semibold">Локальное хранение данных</h3>
+                <p className="mt-1 text-[11px] leading-5 text-white/35">
+                  Заявки, услуги и настройки хранятся в этом браузере на текущем устройстве.
                 </p>
               </div>
-            </div>
-            <div className="flex flex-wrap items-end gap-2">
-              <label className="block">
-                <span className="mb-1.5 block text-[10px] uppercase tracking-[.16em] text-white/40">
-                  Дней вперёд
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  max="365"
-                  step="1"
-                  value={advanceDaysDraft}
-                  onChange={(event) => setAdvanceDaysDraft(event.target.value)}
-                  className="h-10 w-28 rounded-xl border border-white/10 bg-white/[.04] px-3 text-sm outline-none focus:border-white/30"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={saveBookingWindow}
-                className="h-10 rounded-xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
-              >
-                Сохранить
-              </button>
-            </div>
-          </Panel>
-        </div>
-      </main>
+            </Panel>
+          </div>
+        </section>
+      )}
 
       {showNew && (
         <div
