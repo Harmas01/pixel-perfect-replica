@@ -17,7 +17,7 @@ import {
 } from "@/lib/settings";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
-import aboutImg from "@/assets/about.jpg";
+import aboutImg from "@/assets/about-dog.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -412,7 +412,7 @@ function About() {
           <div className="absolute -inset-4 rounded-[2rem] border border-line" />
           <img
             src={aboutImg}
-            alt="Грумер расчёсывает белую мальтийскую болонку"
+            alt="Ухоженная собака после груминга в салоне Лакки"
             loading="lazy"
             width={1008}
             height={1200}
@@ -475,7 +475,7 @@ function Gallery() {
     },
     {
       src: aboutImg,
-      alt: "Грумер салона Лакки во время работы",
+      alt: "Ухоженная собака после груминга в салоне Лакки",
       label: "Забота в каждой детали",
       className: "",
       imageClassName: "object-cover",
