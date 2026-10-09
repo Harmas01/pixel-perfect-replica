@@ -1134,11 +1134,12 @@ function AdminPage({
                 </div>
                 <Star className="h-5 w-5 shrink-0 text-amber-200" />
               </div>
-              <div className="mt-5 overflow-hidden rounded-2xl bg-white">
+              <div className="mx-auto mt-5 max-w-[800px] overflow-hidden rounded-2xl bg-white">
                 <iframe
                   title="Новые отзывы о салоне Лакки на Яндекс Картах"
                   src={YANDEX_REVIEWS_WIDGET_URL}
-                  className="block h-[980px] w-full border-0"
+                  loading="lazy"
+                  className="block h-[680px] w-full border-0"
                 />
               </div>
               <a

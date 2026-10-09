@@ -169,6 +169,8 @@ const ADVANTAGES = [
 ];
 
 const YANDEX_REVIEWS_WIDGET_URL = "https://yandex.ru/maps-reviews-widget/184039255742?comments";
+const YANDEX_REVIEWS_URL =
+  "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
 
 function useReveal() {
   useEffect(() => {
@@ -541,8 +543,6 @@ function Gallery() {
 }
 
 function Reviews() {
-  const [showMore, setShowMore] = useState(false);
-
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
@@ -550,18 +550,19 @@ function Reviews() {
         <iframe
           title="Свежие отзывы о салоне Лакки на Яндекс Картах"
           src={YANDEX_REVIEWS_WIDGET_URL}
-          className={`block w-full transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
+          loading="lazy"
+          className="block h-[680px] w-full border-0"
         />
       </div>
-      <div className="mt-7 flex flex-col items-center gap-4">
-        <button
-          type="button"
+      <div className="mt-7 flex justify-center">
+        <a
+          href={YANDEX_REVIEWS_URL}
+          target="_blank"
+          rel="noreferrer"
           className="btn-outline"
-          aria-expanded={showMore}
-          onClick={() => setShowMore((value) => !value)}
         >
-          {showMore ? "Свернуть отзывы ↑" : "Показать ещё отзывы ↓"}
-        </button>
+          Посмотреть ещё на Яндекс Картах ↗
+        </a>
       </div>
     </section>
   );
