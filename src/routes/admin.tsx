@@ -775,7 +775,7 @@ function AdminPage() {
                     <Plus className="h-3.5 w-3.5" /> Добавить
                   </button>
                 </div>
-                <div className="mt-5 max-h-[290px] space-y-2 overflow-y-auto pr-1">
+                <div className="admin-scrollbar mt-5 max-h-[290px] space-y-2 overflow-y-auto pr-2">
                   {salonServices.map((service, index) => (
                     <div
                       key={`${service.name}-${index}`}
@@ -862,7 +862,7 @@ function AdminPage() {
       </main>
 
       {settingsOpen && (
-        <section className="fixed inset-y-0 right-0 z-[60] overflow-y-auto bg-[#090909] lg:left-[284px]">
+        <section className="admin-scrollbar fixed inset-y-0 right-0 z-[60] overflow-y-auto bg-[#090909] lg:left-[284px]">
           <div className="sticky top-0 z-10 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#090909]/90 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
             <div>
               <p className="text-[10px] uppercase tracking-[.22em] text-white/35">
@@ -963,7 +963,7 @@ function AdminPage() {
         >
           <form
             onSubmit={addAppointment}
-            className="max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-[2rem] border border-white/15 bg-[#111] p-5 shadow-2xl sm:p-7"
+            className="admin-scrollbar max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-[2rem] border border-white/15 bg-[#111] p-5 shadow-2xl sm:p-7"
           >
             <div className="flex items-start justify-between">
               <div>
