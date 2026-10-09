@@ -56,7 +56,6 @@ import {
 } from "@/lib/settings";
 import {
   getAuthorizedSession,
-  requestAdminActivation,
   signInAdmin,
   signOutAdmin,
   type AdminAuthSession,
@@ -182,47 +181,25 @@ function AdminLogin({
   onAuthenticated: (session: AdminAuthSession) => void;
   initialError?: string;
 }) {
-  const [mode, setMode] = useState<"login" | "activate">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
-  const [message, setMessage] = useState("");
 
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setError("");
-    setMessage("");
 
     try {
-      if (mode === "login") {
-        const session = await signInAdmin(email, password);
-        onAuthenticated(session);
-        return;
-      }
-
-      const result = await requestAdminActivation(email, password);
-      if (result.session) {
-        onAuthenticated(result.session);
-        return;
-      }
-      setMessage(result.message);
-      setMode("login");
-      setPassword("");
+      const session = await signInAdmin(email, password);
+      onAuthenticated(session);
     } catch (authError) {
       setError(authError instanceof Error ? authError.message : "Не удалось выполнить вход");
     } finally {
       setBusy(false);
     }
-  };
-
-  const switchMode = () => {
-    setMode((current) => (current === "login" ? "activate" : "login"));
-    setError("");
-    setMessage("");
-    setPassword("");
   };
 
   return (
@@ -247,13 +224,10 @@ function AdminLogin({
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.07] text-white/70">
             <KeyRound className="h-5 w-5" />
           </div>
-          <h1 className="mt-5 font-display text-4xl font-semibold">
-            {mode === "login" ? "Вход в панель" : "Первый вход"}
-          </h1>
+          <h1 className="mt-5 font-display text-4xl font-semibold">Вход в панель</h1>
           <p className="mt-2 text-sm leading-6 text-white/40">
-            {mode === "login"
-              ? "Введите почту администратора и пароль. После закрытия приложения потребуется войти снова."
-              : "Укажите разрешённую почту и придумайте пароль. На почту придёт письмо для подтверждения."}
+            Введите почту администратора и пароль. Учётная запись создаётся только вручную
+            владельцем проекта в Supabase.
           </p>
         </div>
 
@@ -286,10 +260,10 @@ function AdminLogin({
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={8}
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Не менее 8 символов"
+                placeholder="Введите пароль"
                 className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30"
               />
               <button
@@ -308,34 +282,33 @@ function AdminLogin({
               {error}
             </div>
           )}
-          {message && (
-            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.08] px-4 py-3 text-xs leading-5 text-emerald-100">
-              {message}
-            </div>
-          )}
 
           <button
             type="submit"
             disabled={busy}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
           >
-            {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
-            {mode === "login" ? "Войти" : "Получить письмо"}
+            {busy ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <KeyRound className="h-4 w-4" />
+            )}
+            Войти
           </button>
         </form>
 
-        <button
-          type="button"
-          onClick={switchMode}
-          className="mt-5 w-full text-center text-xs text-white/40 underline decoration-white/20 underline-offset-4 transition hover:text-white/70"
+        <a
+          href="https://supabase.com/dashboard/project/axtqkqicdcbmfobyvjhj/auth/users"
+          target="_blank"
+          rel="noreferrer"
+          className="mt-5 block text-center text-xs text-white/40 underline decoration-white/20 underline-offset-4 transition hover:text-white/70"
         >
-          {mode === "login"
-            ? "Первый вход — создать пароль"
-            : "Пароль уже создан — вернуться ко входу"}
-        </button>
+          Управление администраторами в Supabase
+        </a>
 
         <p className="mt-6 border-t border-white/10 pt-5 text-center text-[10px] leading-5 text-white/25">
-          Доступ разрешён только владельцу указанной администратором почты.
+          Регистрация через приложение отключена. Доступ разрешён только заранее созданной
+          учётной записи.
         </p>
       </div>
     </div>

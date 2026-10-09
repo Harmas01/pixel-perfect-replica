@@ -1,6 +1,6 @@
 const SUPABASE_URL = "https://axtqkqicdcbmfobyvjhj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_g_quHAMm9Utcz33BJEfmMg_YnQG1QJM";
-export const ADMIN_EMAIL = "harmasbro@gmail.com";
+const ADMIN_EMAIL = "harmasbro@gmail.com";
 
 const SESSION_STORAGE_KEY = "lucky-admin-auth-session-v1";
 
@@ -179,41 +179,6 @@ export async function signInAdmin(email: string, password: string) {
   await verifyAllowlist(session);
   saveSession(session);
   return session;
-}
-
-export async function requestAdminActivation(email: string, password: string) {
-  ensureAllowedEmail(email);
-  if (password.length < 8) {
-    throw new Error("Пароль должен содержать не менее 8 символов");
-  }
-
-  const redirectTo = `${window.location.origin}${import.meta.env.BASE_URL}admin`;
-  const response = await fetch(
-    `${SUPABASE_URL}/auth/v1/signup?redirect_to=${encodeURIComponent(redirectTo)}`,
-    {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({
-        email: normalizeEmail(email),
-        password,
-        data: { role: "salon_admin" },
-      }),
-    },
-  );
-  const payload = await readAuthResponse(response);
-
-  if (payload.access_token && payload.refresh_token && payload.user) {
-    const session = createSession(payload);
-    await verifyAllowlist(session);
-    saveSession(session);
-    return { session, message: "" };
-  }
-
-  return {
-    session: null,
-    message:
-      "Письмо отправлено. Откройте ссылку из письма, затем вернитесь в приложение и войдите.",
-  };
 }
 
 export async function signOutAdmin() {
