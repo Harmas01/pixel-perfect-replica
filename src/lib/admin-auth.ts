@@ -7,6 +7,8 @@ const LEGACY_SESSION_STORAGE_KEY = "lucky-admin-auth-session-v1";
 const PENDING_MAGIC_LINK_KEY = "lucky-admin-pending-magic-link-v1";
 const MAGIC_LINK_VALIDITY_MS = 15 * 60 * 1_000;
 
+export const ADMIN_EMAIL_CONFIRMATION_ENABLED = false;
+
 export type AdminAuthUser = {
   id: string;
   email: string;
@@ -207,6 +209,12 @@ async function consumeMagicLinkRedirect() {
   const refreshToken = params.get("refresh_token");
   const authError = params.get("error_description");
 
+  if (!ADMIN_EMAIL_CONFIRMATION_ENABLED && (accessToken || refreshToken || authError)) {
+    clearPendingMagicLink();
+    window.history.replaceState(null, "", window.location.pathname);
+    return null;
+  }
+
   if (!accessToken || !refreshToken) {
     if (authError) {
       window.history.replaceState(null, "", window.location.pathname);
@@ -277,6 +285,15 @@ export async function startAdminSignIn(email: string, password: string) {
   const temporarySession = createSession(await readAuthResponse(response));
   await verifyAllowlist(temporarySession);
 
+  if (!ADMIN_EMAIL_CONFIRMATION_ENABLED) {
+    clearPendingMagicLink();
+    saveSession(temporarySession);
+    return {
+      email: normalizeEmail(email),
+      session: temporarySession,
+    };
+  }
+
   await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
     method: "POST",
     headers: authHeaders(temporarySession.access_token),
@@ -289,7 +306,10 @@ export async function startAdminSignIn(email: string, password: string) {
     clearPendingMagicLink();
     throw error;
   }
-  return normalizeEmail(email);
+  return {
+    email: normalizeEmail(email),
+    session: null,
+  };
 }
 
 export async function resendAdminLoginCode(email: string) {

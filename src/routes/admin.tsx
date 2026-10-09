@@ -68,6 +68,7 @@ import {
   writeBookingSettings,
 } from "@/lib/settings";
 import {
+  ADMIN_EMAIL_CONFIRMATION_ENABLED,
   getAuthorizedSession,
   resendAdminLoginCode,
   signOutAdmin,
@@ -291,11 +292,17 @@ function AdminLogin({
     setError("");
 
     try {
-      const normalizedEmail = await startAdminSignIn(email, password);
+      const signInResult = await startAdminSignIn(email, password);
       clearLoginGuard();
       setLoginGuard({ failedAttempts: 0, lockedUntil: 0 });
-      setVerifiedEmail(normalizedEmail);
       setPassword("");
+
+      if (signInResult.session) {
+        onAuthenticated(signInResult.session);
+        return;
+      }
+
+      setVerifiedEmail(signInResult.email);
       setCode("");
       setResendAvailableAt(Date.now() + 60_000);
       setNow(Date.now());
@@ -414,7 +421,9 @@ function AdminLogin({
           </h1>
           <p className="mt-2 text-sm leading-6 text-white/40">
             {stage === "credentials"
-              ? "Сначала введите почту администратора и пароль. После проверки мы отправим письмо для входа."
+              ? ADMIN_EMAIL_CONFIRMATION_ENABLED
+                ? "Введите почту администратора и пароль. После проверки мы отправим письмо для входа."
+                : "Введите почту администратора и пароль."
               : `Откройте письмо, отправленное на ${verifiedEmail}.`}
           </p>
         </div>
@@ -469,6 +478,7 @@ function AdminLogin({
               </span>
             </label>
 
+            {ADMIN_EMAIL_CONFIRMATION_ENABLED && (
             <div className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.04] px-4 py-3 text-xs leading-5 text-white/55">
               <Mail className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
               <p>
@@ -477,6 +487,7 @@ function AdminLogin({
                 {" "}с адреса noreply@mail.app.supabase.io. Проверьте также папку «Спам».
               </p>
             </div>
+            )}
 
             {isLocked ? (
               <div
@@ -504,7 +515,11 @@ function AdminLogin({
               ) : (
                 <KeyRound className="h-4 w-4" />
               )}
-              {isLocked ? `Заблокировано ${remainingLabel}` : "Продолжить"}
+              {isLocked
+              ? `Заблокировано ${remainingLabel}`
+              : ADMIN_EMAIL_CONFIRMATION_ENABLED
+                ? "Продолжить"
+                : "Войти"}
             </button>
           </form>
         ) : (
