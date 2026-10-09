@@ -15,7 +15,7 @@ import {
   getBookingDateBounds,
   readBookingSettings,
 } from "@/lib/settings";
-import { fetchGalleryImageUrls, GALLERY_IMAGES_UPDATED_EVENT } from "@/lib/site-content";
+import { fetchGalleryImageUrls, GALLERY_IMAGES_UPDATED_EVENT, type GalleryImageItem } from "@/lib/site-content";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about-dog.png";
@@ -212,7 +212,7 @@ function useSalonServices() {
 }
 
 function useGalleryImages() {
-  const [images, setImages] = useState<Array<string | null>>([null, null, null]);
+  const [images, setImages] = useState<GalleryImageItem[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -490,29 +490,41 @@ function Why() {
 
 function Gallery() {
   const galleryImages = useGalleryImages();
-  const photos = [
-    {
-      src: galleryImages[0] || heroDog,
-      alt: "Ухоженная собака после груминга в салоне Лакки",
-      label: "Бережный уход",
-      className: "md:col-span-2 md:row-span-2",
-      imageClassName: galleryImages[0] ? "object-cover" : "object-cover object-[70%_center]",
-    },
-    {
-      src: galleryImages[1] || aboutImg,
-      alt: "Ухоженная собака после груминга в салоне Лакки",
-      label: "Забота в каждой детали",
-      className: "",
-      imageClassName: "object-cover",
-    },
-    {
-      src: galleryImages[2] || logo,
-      alt: galleryImages[2] ? "Фотография салона груминга Лакки" : "Логотип салона груминга Лакки",
-      label: "Салон «Лакки»",
-      className: "",
-      imageClassName: galleryImages[2] ? "object-cover" : "object-contain p-10",
-    },
-  ];
+  const photos = galleryImages.length
+    ? galleryImages.map((image, index) => ({
+        id: image.id,
+        src: image.url,
+        alt: "Фотография салона груминга «Лакки»",
+        label: `Фотография ${index + 1}`,
+        className: index === 0 ? "md:col-span-2 md:row-span-2" : "",
+        imageClassName: "object-cover",
+      }))
+    : [
+        {
+          id: "fallback-hero",
+          src: heroDog,
+          alt: "Ухоженная собака после груминга в салоне Лакки",
+          label: "Бережный уход",
+          className: "md:col-span-2 md:row-span-2",
+          imageClassName: "object-cover object-[70%_center]",
+        },
+        {
+          id: "fallback-about",
+          src: aboutImg,
+          alt: "Ухоженная собака после груминга в салоне Лакки",
+          label: "Забота в каждой детали",
+          className: "",
+          imageClassName: "object-cover",
+        },
+        {
+          id: "fallback-logo",
+          src: logo,
+          alt: "Логотип салона груминга Лакки",
+          label: "Салон «Лакки»",
+          className: "",
+          imageClassName: "object-contain p-10",
+        },
+      ];
 
   return (
     <section id="gallery" className="mx-auto max-w-7xl scroll-mt-20 px-5 py-28 md:px-8">
@@ -520,7 +532,7 @@ function Gallery() {
       <div className="grid auto-rows-[280px] gap-4 md:grid-cols-3 md:auto-rows-[240px]">
         {photos.map((photo, index) => (
           <figure
-            key={photo.label}
+            key={photo.id}
             className={`reveal group relative overflow-hidden rounded-[1.6rem] border border-border bg-card ${photo.className}`}
             style={{ transitionDelay: `${index * 90}ms` }}
           >

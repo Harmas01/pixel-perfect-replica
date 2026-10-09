@@ -37,8 +37,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
-import heroDog from "@/assets/hero-dog.jpg";
-import aboutImg from "@/assets/about-dog.png";
 import { Toaster } from "@/components/ui/sonner";
 import {
   ORDERS_STORAGE_KEY,
@@ -76,18 +74,49 @@ import {
   type AdminAuthSession,
 } from "@/lib/admin-auth";
 import {
+  deleteGalleryImage,
   fetchGalleryImageUrls,
   GALLERY_IMAGES_UPDATED_EVENT,
   uploadGalleryImage,
-  type GalleryImageSlot,
+  type GalleryImageItem,
 } from "@/lib/site-content";
 
 const WINDOWS_APP_DOWNLOAD_URL =
   "https://github.com/Harmas01/pixel-perfect-replica/releases/download/windows-app-latest/LuckyAdmin.exe";
 const YANDEX_REVIEWS_URL =
   "https://yandex.ru/maps/26081/kolpino/?ll=30.608168%2C59.741450&mode=poi&poi%5Bpoint%5D=30.608355%2C59.741533&poi%5Buri%5D=ymapsbm1%3A%2F%2Forg%3Foid%3D184039255742&pt=30.608306%2C59.741463%2Cpm2rdl&tab=reviews&z=20.8";
-const GALLERY_FALLBACKS = [heroDog, aboutImg, logo] as const;
 const NOTIFICATIONS_STORAGE_KEY = "lucky-admin-notifications-enabled";
+const LOGIN_GUARD_STORAGE_KEY = "lucky-admin-login-guard-v1";
+const MAX_LOGIN_ATTEMPTS = 3;
+const LOGIN_LOCK_DURATION_MS = 10 * 60 * 1000;
+
+type LoginGuardState = {
+  failedAttempts: number;
+  lockedUntil: number;
+};
+
+function readLoginGuard(): LoginGuardState {
+  if (typeof window === "undefined") return { failedAttempts: 0, lockedUntil: 0 };
+  try {
+    const parsed = JSON.parse(
+      window.localStorage.getItem(LOGIN_GUARD_STORAGE_KEY) || "{}",
+    ) as Partial<LoginGuardState>;
+    return {
+      failedAttempts: Number(parsed.failedAttempts) || 0,
+      lockedUntil: Number(parsed.lockedUntil) || 0,
+    };
+  } catch {
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
+}
+
+function writeLoginGuard(state: LoginGuardState) {
+  window.localStorage.setItem(LOGIN_GUARD_STORAGE_KEY, JSON.stringify(state));
+}
+
+function clearLoginGuard() {
+  window.localStorage.removeItem(LOGIN_GUARD_STORAGE_KEY);
+}
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -208,17 +237,87 @@ function AdminLogin({
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
+  const [loginGuard, setLoginGuard] = useState<LoginGuardState>({
+    failedAttempts: 0,
+    lockedUntil: 0,
+  });
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    setLoginGuard(readLoginGuard());
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    const syncGuard = () => setLoginGuard(readLoginGuard());
+    window.addEventListener("storage", syncGuard);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("storage", syncGuard);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (loginGuard.lockedUntil && loginGuard.lockedUntil <= now) {
+      clearLoginGuard();
+      setLoginGuard({ failedAttempts: 0, lockedUntil: 0 });
+      setError("");
+    }
+  }, [loginGuard.lockedUntil, now]);
+
+  const remainingSeconds = Math.max(
+    0,
+    Math.ceil((loginGuard.lockedUntil - now) / 1_000),
+  );
+  const isLocked = remainingSeconds > 0;
+  const remainingLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(
+    remainingSeconds % 60,
+  ).padStart(2, "0")}`;
 
   const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const currentGuard = readLoginGuard();
+    if (currentGuard.lockedUntil > Date.now()) {
+      setLoginGuard(currentGuard);
+      setNow(Date.now());
+      return;
+    }
+
     setBusy(true);
     setError("");
 
     try {
       const session = await signInAdmin(email, password);
+      clearLoginGuard();
+      setLoginGuard({ failedAttempts: 0, lockedUntil: 0 });
       onAuthenticated(session);
     } catch (authError) {
-      setError(authError instanceof Error ? authError.message : "Не удалось выполнить вход");
+      const message = authError instanceof Error ? authError.message : "Не удалось выполнить вход";
+      const isInvalidCredentials =
+        message === "Неверная почта или пароль" ||
+        message === "Для этой почты доступ к панели не разрешён";
+
+      if (!isInvalidCredentials) {
+        setError(message);
+        return;
+      }
+
+      const latestGuard = readLoginGuard();
+      const failedAttempts = latestGuard.failedAttempts + 1;
+      setPassword("");
+
+      if (failedAttempts >= MAX_LOGIN_ATTEMPTS) {
+        const lockedUntil = Date.now() + LOGIN_LOCK_DURATION_MS;
+        const nextGuard = { failedAttempts: 0, lockedUntil };
+        writeLoginGuard(nextGuard);
+        setLoginGuard(nextGuard);
+        setNow(Date.now());
+        setError("Слишком много неверных попыток. Вход заблокирован на 10 минут.");
+      } else {
+        const nextGuard = { failedAttempts, lockedUntil: 0 };
+        writeLoginGuard(nextGuard);
+        setLoginGuard(nextGuard);
+        setError(
+          `${message}. Осталось попыток: ${MAX_LOGIN_ATTEMPTS - failedAttempts}`,
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -248,8 +347,8 @@ function AdminLogin({
           </div>
           <h1 className="mt-5 font-display text-4xl font-semibold">Вход в панель</h1>
           <p className="mt-2 text-sm leading-6 text-white/40">
-            Введите почту администратора и пароль. Учётная запись создаётся только вручную
-            владельцем проекта в Supabase.
+            Введите почту администратора и пароль. После трёх неверных попыток вход
+            блокируется на 10 минут.
           </p>
         </div>
 
@@ -263,11 +362,12 @@ function AdminLogin({
               <input
                 type="email"
                 required
+                disabled={isLocked}
                 autoComplete="username"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="name@example.com"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-4 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-4 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
               />
             </span>
           </label>
@@ -282,16 +382,18 @@ function AdminLogin({
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={8}
+                disabled={isLocked}
                 autoComplete="current-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="Введите пароль"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
               />
               <button
                 type="button"
+                disabled={isLocked}
                 onClick={() => setShowPassword((visible) => !visible)}
-                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-white/35 transition hover:bg-white/10 hover:text-white"
+                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-white/35 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
                 aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -299,15 +401,25 @@ function AdminLogin({
             </span>
           </label>
 
-          {error && (
-            <div className="rounded-2xl border border-red-300/20 bg-red-400/[.08] px-4 py-3 text-xs leading-5 text-red-100">
-              {error}
+          {isLocked ? (
+            <div
+              className="rounded-2xl border border-amber-300/20 bg-amber-400/[.08] px-4 py-3 text-xs leading-5 text-amber-100"
+              aria-live="polite"
+            >
+              Вход временно заблокирован. Попробуйте снова через{" "}
+              <span className="font-semibold tabular-nums">{remainingLabel}</span>.
             </div>
+          ) : (
+            error && (
+              <div className="rounded-2xl border border-red-300/20 bg-red-400/[.08] px-4 py-3 text-xs leading-5 text-red-100">
+                {error}
+              </div>
+            )
           )}
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || isLocked}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
           >
             {busy ? (
@@ -315,7 +427,7 @@ function AdminLogin({
             ) : (
               <KeyRound className="h-4 w-4" />
             )}
-            Войти
+            {isLocked ? `Заблокировано ${remainingLabel}` : "Войти"}
           </button>
         </form>
 
@@ -399,8 +511,9 @@ function AdminPage({
   const knownOrderIds = useRef<Set<number>>(new Set());
   const ordersInitialized = useRef(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<Array<string | null>>([null, null, null]);
-  const [galleryUploading, setGalleryUploading] = useState<GalleryImageSlot | null>(null);
+  const [galleryImages, setGalleryImages] = useState<GalleryImageItem[]>([]);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryDeleting, setGalleryDeleting] = useState<string | null>(null);
   const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
   const [bookingDateBounds, setBookingDateBounds] = useState<{
     min: string;
@@ -763,26 +876,36 @@ function AdminPage({
     }
   };
 
-  const changeGalleryImage = async (
-    slot: GalleryImageSlot,
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
+  const addGalleryImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     const file = input.files?.[0];
     if (!file) return;
 
-    setGalleryUploading(slot);
+    setGalleryUploading(true);
     try {
-      const url = await uploadGalleryImage(file, slot, authSession.access_token);
-      setGalleryImages((images) =>
-        images.map((image, index) => (index === slot - 1 ? url : image)),
-      );
-      toast.success(`Фотография №${slot} обновлена в галерее`);
+      const image = await uploadGalleryImage(file, authSession.access_token);
+      setGalleryImages((images) => [...images, image]);
+      toast.success("Фотография добавлена в галерею");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Не удалось обновить фотографию");
+      toast.error(error instanceof Error ? error.message : "Не удалось добавить фотографию");
     } finally {
       input.value = "";
-      setGalleryUploading(null);
+      setGalleryUploading(false);
+    }
+  };
+
+  const removeGalleryImage = async (image: GalleryImageItem) => {
+    if (!window.confirm("Удалить эту фотографию из галереи?")) return;
+
+    setGalleryDeleting(image.id);
+    try {
+      await deleteGalleryImage(image, authSession.access_token);
+      setGalleryImages((images) => images.filter((item) => item.id !== image.id));
+      toast.success("Фотография удалена из галереи");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось удалить фотографию");
+    } finally {
+      setGalleryDeleting(null);
     }
   };
 
@@ -1259,64 +1382,83 @@ function AdminPage({
             </Panel>
 
             <Panel id="gallery-admin" className="overflow-hidden p-5 sm:p-7 lg:col-span-3">
-              <div className="flex items-start gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
-                  <Upload className="h-5 w-5 text-white/65" />
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
+                    <Images className="h-5 w-5 text-white/65" />
+                  </div>
+                  <div>
+                    <h3 className="font-sans text-base font-semibold">Галерея сайта</h3>
+                    <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">
+                      Добавляйте сколько угодно фотографий. Они сразу появятся в галерее на основном сайте.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-sans text-base font-semibold">Фотографии галереи</h3>
-                  <p className="mt-1 text-xs leading-5 text-white/40">
-                    Замените любую из трёх фотографий — изменения сразу появятся в галерее основного сайта.
+                <label
+                  className={`flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_20px_rgba(255,255,255,.12)] ${galleryUploading ? "pointer-events-none opacity-60" : ""}`}
+                >
+                  {galleryUploading ? (
+                    <>
+                      <LoaderCircle className="h-4 w-4 animate-spin" /> Загрузка…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" /> Добавить фото
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    disabled={galleryUploading || galleryDeleting !== null}
+                    onChange={(event) => void addGalleryImage(event)}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
+
+              {galleryImages.length ? (
+                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {galleryImages.map((image, index) => {
+                    const isDeleting = galleryDeleting === image.id;
+                    return (
+                      <div
+                        key={image.id}
+                        className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.025] p-3"
+                      >
+                        <img
+                          src={image.url}
+                          alt={`Фотография ${index + 1} в галерее`}
+                          className="aspect-square w-full rounded-xl bg-black object-cover"
+                        />
+                        <button
+                          type="button"
+                          disabled={galleryDeleting !== null || galleryUploading}
+                          onClick={() => void removeGalleryImage(image)}
+                          className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300/20 text-xs text-red-200 transition hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+                        >
+                          {isDeleting ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          {isDeleting ? "Удаление…" : "Удалить"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-6 rounded-2xl border border-dashed border-white/15 bg-white/[.02] p-6 text-center">
+                  <Images className="mx-auto h-8 w-8 text-white/35" />
+                  <p className="mt-3 text-sm text-white/65">Пока нет добавленных фотографий</p>
+                  <p className="mt-1 text-xs leading-5 text-white/35">
+                    Основной сайт пока показывает стандартные изображения. Добавьте первую фотографию кнопкой выше.
                   </p>
                 </div>
-              </div>
+              )}
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                {[0, 1, 2].map((index) => {
-                  const slot = (index + 1) as GalleryImageSlot;
-                  const isUploading = galleryUploading === slot;
-                  const usesLogoFallback = index === 2 && !galleryImages[index];
-
-                  return (
-                    <div
-                      key={slot}
-                      className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.025] p-3"
-                    >
-                      <img
-                        src={galleryImages[index] || GALLERY_FALLBACKS[index]}
-                        alt={`Фотография №${slot} в галерее`}
-                        className={`aspect-square w-full rounded-xl bg-black object-cover ${
-                          usesLogoFallback ? "object-contain p-4" : ""
-                        }`}
-                      />
-                      <label
-                        className={`mt-3 flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-3 text-xs font-semibold text-black transition hover:shadow-[0_0_20px_rgba(255,255,255,.12)] ${
-                          isUploading ? "pointer-events-none opacity-60" : ""
-                        }`}
-                      >
-                        {isUploading ? (
-                          <>
-                            <LoaderCircle className="h-4 w-4 animate-spin" /> Загрузка…
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="h-4 w-4" /> Заменить №{slot}
-                          </>
-                        )}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          disabled={galleryUploading !== null}
-                          onChange={(event) => void changeGalleryImage(slot, event)}
-                          className="sr-only"
-                        />
-                      </label>
-                    </div>
-                  );
-                })}
-              </div>
               <p className="mt-4 text-[11px] leading-5 text-white/35">
-                Поддерживаются JPG, PNG и WebP размером до 8 МБ.
+                JPG, PNG и WebP до 8 МБ. Удаление убирает фотографию и из общего хранилища.
               </p>
             </Panel>
           </div>
