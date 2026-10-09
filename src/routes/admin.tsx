@@ -38,6 +38,7 @@ import {
 } from "@/lib/orders";
 import {
   appendCustomService,
+  DEFAULT_SALON_SERVICES,
   deleteSalonService,
   readSalonServices,
   SERVICES_UPDATED_EVENT,
@@ -151,8 +152,12 @@ function AdminPage() {
   const [query, setQuery] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [showServiceForm, setShowServiceForm] = useState(false);
-  const [salonServices, setSalonServices] = useState<SalonService[]>(() => readSalonServices());
-  const [workdayStatus, setWorkdayStatus] = useState(() => getWorkdayStatus());
+  const [salonServices, setSalonServices] = useState<SalonService[]>(DEFAULT_SALON_SERVICES);
+  const [workdayStatus, setWorkdayStatus] = useState({
+    isOpen: true,
+    text: "Обновляем статус…",
+  });
+  const [currentDateLabel, setCurrentDateLabel] = useState("Сегодня");
   const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
   const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
   const [callChecked, setCallChecked] = useState(false);
@@ -171,14 +176,6 @@ function AdminPage() {
       window.removeEventListener(ORDERS_UPDATED_EVENT, refreshOrders);
     };
   }, []);
-
-  const currentDateLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).format(
-        new Date(),
-      ),
-    [],
-  );
 
   const orderStats = useMemo(() => {
     return [
@@ -220,6 +217,13 @@ function AdminPage() {
 
   useEffect(() => {
     const updateWorkdayStatus = () => setWorkdayStatus(getWorkdayStatus());
+    setCurrentDateLabel(
+      new Intl.DateTimeFormat("ru-RU", {
+        day: "numeric",
+        month: "long",
+        weekday: "long",
+      }).format(new Date()),
+    );
     updateWorkdayStatus();
     const timer = window.setInterval(updateWorkdayStatus, 60_000);
     return () => window.clearInterval(timer);

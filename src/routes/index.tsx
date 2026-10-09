@@ -3,7 +3,12 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { appendOrder, isTimeSlotTaken, readOrders } from "@/lib/orders";
-import { readSalonServices, SERVICES_UPDATED_EVENT, type SalonService } from "@/lib/services";
+import {
+  DEFAULT_SALON_SERVICES,
+  readSalonServices,
+  SERVICES_UPDATED_EVENT,
+  type SalonService,
+} from "@/lib/services";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about.jpg";
@@ -175,7 +180,7 @@ function useReveal() {
 }
 
 function useSalonServices() {
-  const [services, setServices] = useState<SalonService[]>(() => readSalonServices());
+  const [services, setServices] = useState<SalonService[]>(DEFAULT_SALON_SERVICES);
 
   useEffect(() => {
     const refreshServices = () => setServices(readSalonServices());
