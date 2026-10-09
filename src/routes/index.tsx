@@ -9,6 +9,11 @@ import {
   SERVICES_UPDATED_EVENT,
   type SalonService,
 } from "@/lib/services";
+import {
+  BOOKING_SETTINGS_UPDATED_EVENT,
+  getBookingDateBounds,
+  readBookingSettings,
+} from "@/lib/settings";
 import logo from "@/assets/logo.png";
 import heroDog from "@/assets/hero-dog.jpg";
 import aboutImg from "@/assets/about.jpg";
@@ -460,12 +465,43 @@ function Reviews() {
 
 function Booking() {
   const availableServices = useSalonServices();
+  const [bookingWindow, setBookingWindow] = useState<{
+    advanceDays: number;
+    min: string;
+    max: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const refreshBookingWindow = () => {
+      const settings = readBookingSettings();
+      setBookingWindow({
+        advanceDays: settings.advanceDays,
+        ...getBookingDateBounds(settings.advanceDays),
+      });
+    };
+    refreshBookingWindow();
+    window.addEventListener("storage", refreshBookingWindow);
+    window.addEventListener(BOOKING_SETTINGS_UPDATED_EVENT, refreshBookingWindow);
+    return () => {
+      window.removeEventListener("storage", refreshBookingWindow);
+      window.removeEventListener(BOOKING_SETTINGS_UPDATED_EVENT, refreshBookingWindow);
+    };
+  }, []);
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const date = String(data.get("date"));
     const time = String(data.get("time"));
+
+    if (!bookingWindow || date < bookingWindow.min || date > bookingWindow.max) {
+      toast.error(
+        bookingWindow
+          ? `Выберите дату с ${bookingWindow.min.split("-").reverse().join(".")} по ${bookingWindow.max.split("-").reverse().join(".")}`
+          : "Подождите, пока загрузятся доступные даты",
+      );
+      return;
+    }
 
     if (isTimeSlotTaken(readOrders(), date, time)) {
       toast.error("Это время уже занято. Выберите другую дату или время.");
@@ -554,7 +590,19 @@ function Booking() {
           </label>
           <label>
             <L>Желаемая дата</L>
-            <input name="date" required type="date" className="field [color-scheme:dark]" />
+            <input
+              name="date"
+              required
+              type="date"
+              min={bookingWindow?.min}
+              max={bookingWindow?.max}
+              className="field [color-scheme:dark]"
+            />
+            {bookingWindow && (
+              <span className="mt-2 block text-[11px] text-muted-foreground">
+                Запись доступна на {bookingWindow.advanceDays} дней вперёд
+              </span>
+            )}
           </label>
           <label>
             <L>Желаемое время</L>

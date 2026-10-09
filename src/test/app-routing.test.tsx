@@ -3,6 +3,7 @@ import { createRouter, rootRouteId } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
 
 import { routeTree } from "@/routeTree.gen";
+import { getBookingDateBounds, normalizeAdvanceDays } from "@/lib/settings";
 import { getWorkdayStatus } from "@/routes/admin";
 
 // Match routes without running loaders or rendering: loaders may need a server or
@@ -30,5 +31,19 @@ describe("Workday status", () => {
       isOpen: false,
       text: "Салон закрыт · до открытия 13 ч",
     });
+  });
+});
+
+describe("Booking window", () => {
+  it("allows booking fourteen days ahead by default", () => {
+    expect(getBookingDateBounds(14, new Date(2026, 0, 25, 18, 30))).toEqual({
+      min: "2026-01-25",
+      max: "2026-02-08",
+    });
+  });
+
+  it("keeps the admin setting within one year", () => {
+    expect(normalizeAdvanceDays(0)).toBe(1);
+    expect(normalizeAdvanceDays(500)).toBe(365);
   });
 });

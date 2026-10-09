@@ -44,6 +44,13 @@ import {
   SERVICES_UPDATED_EVENT,
   type SalonService,
 } from "@/lib/services";
+import {
+  BOOKING_SETTINGS_UPDATED_EVENT,
+  DEFAULT_BOOKING_ADVANCE_DAYS,
+  getBookingDateBounds,
+  readBookingSettings,
+  writeBookingSettings,
+} from "@/lib/settings";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -164,6 +171,11 @@ function AdminPage() {
   const [ordersReady, setOrdersReady] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [standalone, setStandalone] = useState(false);
+  const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
+  const [bookingDateBounds, setBookingDateBounds] = useState<{
+    min: string;
+    max: string;
+  } | null>(null);
 
   useEffect(() => {
     const refreshOrders = () => setAppointments(readOrders());
@@ -212,6 +224,21 @@ function AdminPage() {
     return () => {
       window.removeEventListener("storage", refreshServices);
       window.removeEventListener(SERVICES_UPDATED_EVENT, refreshServices);
+    };
+  }, []);
+
+  useEffect(() => {
+    const refreshBookingSettings = () => {
+      const settings = readBookingSettings();
+      setAdvanceDaysDraft(String(settings.advanceDays));
+      setBookingDateBounds(getBookingDateBounds(settings.advanceDays));
+    };
+    refreshBookingSettings();
+    window.addEventListener("storage", refreshBookingSettings);
+    window.addEventListener(BOOKING_SETTINGS_UPDATED_EVENT, refreshBookingSettings);
+    return () => {
+      window.removeEventListener("storage", refreshBookingSettings);
+      window.removeEventListener(BOOKING_SETTINGS_UPDATED_EVENT, refreshBookingSettings);
     };
   }, []);
 
@@ -342,12 +369,31 @@ function AdminPage() {
     setDeletingOrder(null);
   };
 
+  const saveBookingWindow = () => {
+    const advanceDays = Number(advanceDaysDraft);
+    if (!Number.isInteger(advanceDays) || advanceDays < 1 || advanceDays > 365) {
+      toast.error("Укажите целое число от 1 до 365 дней");
+      return;
+    }
+    writeBookingSettings({ advanceDays });
+    setBookingDateBounds(getBookingDateBounds(advanceDays));
+    toast.success(`Запись открыта на ${advanceDays} дней вперёд`);
+  };
+
   const addAppointment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const pet = String(data.get("pet") || "Новый питомец");
     const date = String(data.get("date") || "");
     const time = String(data.get("time") || "18:00");
+    if (!bookingDateBounds || date < bookingDateBounds.min || date > bookingDateBounds.max) {
+      toast.error(
+        bookingDateBounds
+          ? `Выберите дату с ${bookingDateBounds.min.split("-").reverse().join(".")} по ${bookingDateBounds.max.split("-").reverse().join(".")}`
+          : "Подождите, пока загрузятся доступные даты",
+      );
+      return;
+    }
     if (isTimeSlotTaken(appointments, date, time)) {
       toast.error("Это время уже занято. Выберите другую дату или время.");
       return;
@@ -844,22 +890,42 @@ function AdminPage() {
 
           <Panel
             id="settings"
-            className="mt-4 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6"
+            className="mt-4 flex flex-wrap items-center justify-between gap-5 p-5 sm:p-6"
           >
             <div className="flex items-center gap-4">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.07]">
                 <PawPrint className="h-5 w-5 text-white/65" />
               </div>
               <div>
-                <h2 className="font-sans text-sm font-semibold">Локальное хранение данных</h2>
+                <h2 className="font-sans text-sm font-semibold">Глубина онлайн-записи</h2>
                 <p className="mt-1 text-[11px] text-white/35">
-                  Заявки и услуги доступны только в этом браузере на этом устройстве
+                  По умолчанию клиент может выбрать дату максимум на 14 дней вперёд
                 </p>
               </div>
             </div>
-            <span className="rounded-xl border border-white/10 px-4 py-2.5 text-xs text-white/45">
-              Облачная база не подключена
-            </span>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="block">
+                <span className="mb-1.5 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                  Дней вперёд
+                </span>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  step="1"
+                  value={advanceDaysDraft}
+                  onChange={(event) => setAdvanceDaysDraft(event.target.value)}
+                  className="h-10 w-28 rounded-xl border border-white/10 bg-white/[.04] px-3 text-sm outline-none focus:border-white/30"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={saveBookingWindow}
+                className="h-10 rounded-xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_24px_rgba(255,255,255,.15)]"
+              >
+                Сохранить
+              </button>
+            </div>
           </Panel>
         </div>
       </main>
@@ -915,7 +981,9 @@ function AdminPage() {
                   name="date"
                   required
                   type="date"
-                  defaultValue={new Date().toISOString().slice(0, 10)}
+                  min={bookingDateBounds?.min}
+                  max={bookingDateBounds?.max}
+                  defaultValue={bookingDateBounds?.min}
                   className="field [color-scheme:dark]"
                 />
               </AdminField>
