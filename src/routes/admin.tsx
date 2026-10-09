@@ -6,7 +6,12 @@ import {
   Check,
   CircleCheck,
   Download,
+  Eye,
+  EyeOff,
+  KeyRound,
   LayoutDashboard,
+  LoaderCircle,
+  Mail,
   LogOut,
   Menu,
   MoreHorizontal,
@@ -49,6 +54,13 @@ import {
   readBookingSettings,
   writeBookingSettings,
 } from "@/lib/settings";
+import {
+  getAuthorizedSession,
+  requestAdminActivation,
+  signInAdmin,
+  signOutAdmin,
+  type AdminAuthSession,
+} from "@/lib/admin-auth";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -57,7 +69,7 @@ export const Route = createFileRoute("/admin")({
       { name: "description", content: "Управление записями и клиентами салона груминга «Лакки»." },
     ],
   }),
-  component: AdminPage,
+  component: AdminAccessGate,
 });
 
 const STATUS: Record<OrderStatus, { label: string; className: string }> = {
@@ -150,7 +162,237 @@ function Panel({
   );
 }
 
-function AdminPage() {
+function AuthLoadingScreen() {
+  return (
+    <div className="grid min-h-screen place-items-center bg-[#090909] px-4 text-white">
+      <div className="text-center">
+        <LoaderCircle className="mx-auto h-7 w-7 animate-spin text-white/55" />
+        <p className="mt-4 text-xs uppercase tracking-[.2em] text-white/35">
+          Проверяем доступ
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AdminLogin({
+  onAuthenticated,
+  initialError = "",
+}: {
+  onAuthenticated: (session: AdminAuthSession) => void;
+  initialError?: string;
+}) {
+  const [mode, setMode] = useState<"login" | "activate">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(initialError);
+  const [message, setMessage] = useState("");
+
+  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setMessage("");
+
+    try {
+      if (mode === "login") {
+        const session = await signInAdmin(email, password);
+        onAuthenticated(session);
+        return;
+      }
+
+      const result = await requestAdminActivation(email, password);
+      if (result.session) {
+        onAuthenticated(result.session);
+        return;
+      }
+      setMessage(result.message);
+      setMode("login");
+      setPassword("");
+    } catch (authError) {
+      setError(authError instanceof Error ? authError.message : "Не удалось выполнить вход");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const switchMode = () => {
+    setMode((current) => (current === "login" ? "activate" : "login"));
+    setError("");
+    setMessage("");
+    setPassword("");
+  };
+
+  return (
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-[#080808] px-4 py-10 text-white">
+      <div className="pointer-events-none absolute left-1/2 top-[-16rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/[.055] blur-3xl" />
+      <div className="relative w-full max-w-md rounded-[2rem] border border-white/12 bg-[#101010]/95 p-6 shadow-2xl shadow-black sm:p-8">
+        <div className="flex items-center gap-4">
+          <img
+            src={logo}
+            alt="Лакки"
+            className="h-14 w-14 rounded-full border border-white/15 object-cover"
+          />
+          <div>
+            <p className="font-display text-2xl font-semibold">Лакки</p>
+            <p className="text-[10px] uppercase tracking-[.22em] text-white/40">
+              Приложение администратора
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8">
+          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.07] text-white/70">
+            <KeyRound className="h-5 w-5" />
+          </div>
+          <h1 className="mt-5 font-display text-4xl font-semibold">
+            {mode === "login" ? "Вход в панель" : "Первый вход"}
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-white/40">
+            {mode === "login"
+              ? "Введите почту администратора и пароль. После закрытия приложения потребуется войти снова."
+              : "Укажите разрешённую почту и придумайте пароль. На почту придёт письмо для подтверждения."}
+          </p>
+        </div>
+
+        <form onSubmit={submitAuth} className="mt-7 space-y-4">
+          <label className="block">
+            <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+              Электронная почта
+            </span>
+            <span className="relative block">
+              <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <input
+                type="email"
+                required
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="name@example.com"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-4 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30"
+              />
+            </span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+              Пароль
+            </span>
+            <span className="relative block">
+              <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                minLength={8}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Не менее 8 символов"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-white/35 transition hover:bg-white/10 hover:text-white"
+                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </span>
+          </label>
+
+          {error && (
+            <div className="rounded-2xl border border-red-300/20 bg-red-400/[.08] px-4 py-3 text-xs leading-5 text-red-100">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[.08] px-4 py-3 text-xs leading-5 text-emerald-100">
+              {message}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
+          >
+            {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+            {mode === "login" ? "Войти" : "Получить письмо"}
+          </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={switchMode}
+          className="mt-5 w-full text-center text-xs text-white/40 underline decoration-white/20 underline-offset-4 transition hover:text-white/70"
+        >
+          {mode === "login"
+            ? "Первый вход — создать пароль"
+            : "Пароль уже создан — вернуться ко входу"}
+        </button>
+
+        <p className="mt-6 border-t border-white/10 pt-5 text-center text-[10px] leading-5 text-white/25">
+          Доступ разрешён только владельцу указанной администратором почты.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AdminAccessGate() {
+  const [session, setSession] = useState<AdminAuthSession | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [initialError, setInitialError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getAuthorizedSession()
+      .then((nextSession) => {
+        if (active) setSession(nextSession);
+      })
+      .catch((authError) => {
+        if (active) {
+          setInitialError(
+            authError instanceof Error
+              ? authError.message
+              : "Не удалось проверить доступ. Попробуйте ещё раз.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setChecking(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (checking) return <AuthLoadingScreen />;
+  if (!session) {
+    return <AdminLogin onAuthenticated={setSession} initialError={initialError} />;
+  }
+
+  return (
+    <AdminPage
+      authSession={session}
+      onSignedOut={async () => {
+        await signOutAdmin();
+        setSession(null);
+      }}
+    />
+  );
+}
+
+function AdminPage({
+  authSession,
+  onSignedOut,
+}: {
+  authSession: AdminAuthSession;
+  onSignedOut: () => Promise<void>;
+}) {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [appointments, setAppointments] = useState<Order[]>([]);
   const [filter, setFilter] = useState<"all" | OrderStatus>("all");
@@ -525,15 +767,22 @@ function AdminPage() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">Администратор</p>
-              <p className="truncate text-xs text-white/45">Салон «Лакки»</p>
+              <p className="truncate text-xs text-white/45">{authSession.user.email}</p>
             </div>
             <MoreHorizontal className="h-4 w-4 text-white/40" />
           </div>
+          <button
+            type="button"
+            onClick={onSignedOut}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 py-2.5 text-xs text-white/55 transition hover:bg-white/10 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" /> Выйти из аккаунта
+          </button>
           <Link
             to="/"
-            className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-white/10 py-2.5 text-xs text-white/55 transition hover:bg-white/10 hover:text-white"
+            className="mt-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] text-white/35 transition hover:text-white/65"
           >
-            <LogOut className="h-4 w-4" /> Вернуться на сайт
+            <ArrowUpRight className="h-3.5 w-3.5" /> Открыть основной сайт
           </Link>
         </div>
       </aside>
