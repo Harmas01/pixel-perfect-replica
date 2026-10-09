@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://axtqkqicdcbmfobyvjhj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_g_quHAMm9Utcz33BJEfmMg_YnQG1QJM";
 const GALLERY_SETTING_PREFIX = "gallery_image_";
+const GALLERY_CAPTION_PREFIX = "gallery_caption_";
 const GALLERY_CACHE_KEY = "lucky-gallery-images";
 const IMAGE_BUCKET = "salon-images";
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
@@ -9,6 +10,7 @@ const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 export type GalleryImageItem = {
   id: string;
   url: string;
+  caption: string;
 };
 export const GALLERY_IMAGES_UPDATED_EVENT = "lucky-gallery-images-updated";
 
@@ -26,8 +28,16 @@ function readCachedGalleryImages(): GalleryImageItem[] {
     if (!Array.isArray(stored)) return [];
     return stored
       .map((item, index) => {
-        if (typeof item === "string" && item) return { id: `legacy-${index + 1}`, url: item };
-        if (item && typeof item.url === "string" && typeof item.id === "string") return item;
+        if (typeof item === "string" && item) {
+          return { id: `legacy-${index + 1}`, url: item, caption: "" };
+        }
+        if (item && typeof item.url === "string" && typeof item.id === "string") {
+          return {
+            id: item.id,
+            url: item.url,
+            caption: typeof item.caption === "string" ? item.caption : "",
+          };
+        }
         return null;
       })
       .filter((item): item is GalleryImageItem => Boolean(item?.url && item.id));
@@ -44,18 +54,27 @@ function cacheGalleryImages(images: GalleryImageItem[]) {
 export async function fetchGalleryImageUrls(): Promise<GalleryImageItem[]> {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/site_settings?select=key,value&key=like.gallery_image_*&order=key.asc`,
+      `${SUPABASE_URL}/rest/v1/site_settings?select=key,value&or=(key.like.gallery_image_*,key.like.gallery_caption_*)&order=key.asc`,
       { headers: apiHeaders() },
     );
     if (!response.ok) return readCachedGalleryImages();
 
     const rows = (await response.json()) as Array<{ key: string; value: string }>;
+    const captions = new Map(
+      rows
+        .filter((row) => row.key.startsWith(GALLERY_CAPTION_PREFIX))
+        .map((row) => [row.key.slice(GALLERY_CAPTION_PREFIX.length), row.value.trim()]),
+    );
     const images = rows
       .filter((row) => row.key.startsWith(GALLERY_SETTING_PREFIX) && row.value)
-      .map((row) => ({
-        id: row.key.slice(GALLERY_SETTING_PREFIX.length),
-        url: row.value,
-      }));
+      .map((row) => {
+        const id = row.key.slice(GALLERY_SETTING_PREFIX.length);
+        return {
+          id,
+          url: row.value,
+          caption: captions.get(id) || "",
+        };
+      });
     cacheGalleryImages(images);
     return images;
   } catch {
@@ -71,7 +90,7 @@ async function requireSuccessful(response: Response, fallbackMessage: string) {
   throw new Error(payload?.message || payload?.error || fallbackMessage);
 }
 
-export async function uploadGalleryImage(file: File, accessToken: string) {
+export async function uploadGalleryImage(file: File, accessToken: string, caption = "") {
   if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
     throw new Error("Выберите изображение JPG, PNG или WebP");
   }
@@ -103,6 +122,8 @@ export async function uploadGalleryImage(file: File, accessToken: string) {
 
   const publicUrl =
     `${SUPABASE_URL}/storage/v1/object/public/${IMAGE_BUCKET}/${objectPath}?v=${Date.now()}`;
+  const normalizedCaption = caption.trim().slice(0, 120);
+  const updatedAt = new Date().toISOString();
   const settingsResponse = await fetch(
     `${SUPABASE_URL}/rest/v1/site_settings?on_conflict=key`,
     {
@@ -112,16 +133,27 @@ export async function uploadGalleryImage(file: File, accessToken: string) {
         "Content-Type": "application/json",
         Prefer: "resolution=merge-duplicates,return=minimal",
       },
-      body: JSON.stringify({
-        key: `${GALLERY_SETTING_PREFIX}${id}`,
-        value: publicUrl,
-        updated_at: new Date().toISOString(),
-      }),
+      body: JSON.stringify([
+        {
+          key: `${GALLERY_SETTING_PREFIX}${id}`,
+          value: publicUrl,
+          updated_at: updatedAt,
+        },
+        ...(normalizedCaption
+          ? [
+              {
+                key: `${GALLERY_CAPTION_PREFIX}${id}`,
+                value: normalizedCaption,
+                updated_at: updatedAt,
+              },
+            ]
+          : []),
+      ]),
     },
   );
   await requireSuccessful(settingsResponse, "Не удалось сохранить фотографию галереи");
 
-  const item = { id, url: publicUrl };
+  const item = { id, url: publicUrl, caption: normalizedCaption };
   const images = [...readCachedGalleryImages(), item];
   cacheGalleryImages(images);
   window.dispatchEvent(new CustomEvent(GALLERY_IMAGES_UPDATED_EVENT, { detail: images }));
@@ -137,8 +169,10 @@ function getStorageObjectPath(url: string) {
 
 export async function deleteGalleryImage(item: GalleryImageItem, accessToken: string) {
   const settingKey = `${GALLERY_SETTING_PREFIX}${item.id}`;
+  const captionKey = `${GALLERY_CAPTION_PREFIX}${item.id}`;
+  const settingKeys = [settingKey, captionKey].map(encodeURIComponent).join(",");
   const settingsResponse = await fetch(
-    `${SUPABASE_URL}/rest/v1/site_settings?key=eq.${encodeURIComponent(settingKey)}`,
+    `${SUPABASE_URL}/rest/v1/site_settings?key=in.(${settingKeys})`,
     {
       method: "DELETE",
       headers: {
@@ -162,4 +196,44 @@ export async function deleteGalleryImage(item: GalleryImageItem, accessToken: st
   const images = readCachedGalleryImages().filter((image) => image.id !== item.id);
   cacheGalleryImages(images);
   window.dispatchEvent(new CustomEvent(GALLERY_IMAGES_UPDATED_EVENT, { detail: images }));
+}
+
+export async function updateGalleryImageCaption(
+  item: GalleryImageItem,
+  caption: string,
+  accessToken: string,
+) {
+  const normalizedCaption = caption.trim().slice(0, 120);
+  const captionKey = `${GALLERY_CAPTION_PREFIX}${item.id}`;
+  const response = await fetch(
+    normalizedCaption
+      ? `${SUPABASE_URL}/rest/v1/site_settings?on_conflict=key`
+      : `${SUPABASE_URL}/rest/v1/site_settings?key=eq.${encodeURIComponent(captionKey)}`,
+    {
+      method: normalizedCaption ? "POST" : "DELETE",
+      headers: {
+        ...apiHeaders(accessToken),
+        "Content-Type": "application/json",
+        Prefer: normalizedCaption ? "resolution=merge-duplicates,return=minimal" : "return=minimal",
+      },
+      ...(normalizedCaption
+        ? {
+            body: JSON.stringify({
+              key: captionKey,
+              value: normalizedCaption,
+              updated_at: new Date().toISOString(),
+            }),
+          }
+        : {}),
+    },
+  );
+  await requireSuccessful(response, "Не удалось сохранить подпись фотографии");
+
+  const updatedItem = { ...item, caption: normalizedCaption };
+  const images = readCachedGalleryImages().map((image) =>
+    image.id === item.id ? updatedItem : image,
+  );
+  cacheGalleryImages(images);
+  window.dispatchEvent(new CustomEvent(GALLERY_IMAGES_UPDATED_EVENT, { detail: images }));
+  return updatedItem;
 }

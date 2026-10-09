@@ -80,6 +80,7 @@ import {
   deleteGalleryImage,
   fetchGalleryImageUrls,
   GALLERY_IMAGES_UPDATED_EVENT,
+  updateGalleryImageCaption,
   uploadGalleryImage,
   type GalleryImageItem,
 } from "@/lib/site-content";
@@ -709,6 +710,9 @@ function AdminPage({
   const [galleryImages, setGalleryImages] = useState<GalleryImageItem[]>([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [galleryDeleting, setGalleryDeleting] = useState<string | null>(null);
+  const [galleryCaptionDraft, setGalleryCaptionDraft] = useState("");
+  const [galleryCaptionEdits, setGalleryCaptionEdits] = useState<Record<string, string>>({});
+  const [galleryCaptionSaving, setGalleryCaptionSaving] = useState<string | null>(null);
   const [advanceDaysDraft, setAdvanceDaysDraft] = useState(String(DEFAULT_BOOKING_ADVANCE_DAYS));
   const [bookingDateBounds, setBookingDateBounds] = useState<{
     min: string;
@@ -840,7 +844,11 @@ function AdminPage({
     let active = true;
     const refreshGalleryImages = () => {
       void fetchGalleryImageUrls().then((images) => {
-        if (active) setGalleryImages(images);
+        if (!active) return;
+        setGalleryImages(images);
+        setGalleryCaptionEdits(
+          Object.fromEntries(images.map((image) => [image.id, image.caption])),
+        );
       });
     };
 
@@ -1095,8 +1103,14 @@ function AdminPage({
 
     setGalleryUploading(true);
     try {
-      const image = await uploadGalleryImage(file, authSession.access_token);
+      const image = await uploadGalleryImage(
+        file,
+        authSession.access_token,
+        galleryCaptionDraft,
+      );
       setGalleryImages((images) => [...images, image]);
+      setGalleryCaptionEdits((captions) => ({ ...captions, [image.id]: image.caption }));
+      setGalleryCaptionDraft("");
       toast.success("Фотография добавлена в галерею");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Не удалось добавить фотографию");
@@ -1118,6 +1132,29 @@ function AdminPage({
       toast.error(error instanceof Error ? error.message : "Не удалось удалить фотографию");
     } finally {
       setGalleryDeleting(null);
+    }
+  };
+
+  const saveGalleryCaption = async (image: GalleryImageItem) => {
+    setGalleryCaptionSaving(image.id);
+    try {
+      const updatedImage = await updateGalleryImageCaption(
+        image,
+        galleryCaptionEdits[image.id] || "",
+        authSession.access_token,
+      );
+      setGalleryImages((images) =>
+        images.map((item) => (item.id === image.id ? updatedImage : item)),
+      );
+      setGalleryCaptionEdits((captions) => ({
+        ...captions,
+        [image.id]: updatedImage.caption,
+      }));
+      toast.success("Подпись фотографии сохранена");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось сохранить подпись");
+    } finally {
+      setGalleryCaptionSaving(null);
     }
   };
 
@@ -1604,7 +1641,7 @@ function AdminPage({
             </Panel>
 
             <Panel id="gallery-admin" className="overflow-hidden p-5 sm:p-7 lg:col-span-3">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-4">
                   <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/[.07]">
                     <Images className="h-5 w-5 text-white/65" />
@@ -1612,36 +1649,55 @@ function AdminPage({
                   <div>
                     <h3 className="font-sans text-base font-semibold">Галерея сайта</h3>
                     <p className="mt-1 max-w-xl text-xs leading-5 text-white/40">
-                      Добавляйте сколько угодно фотографий. Они сразу появятся в галерее на основном сайте.
+                      Добавляйте фотографии и задавайте подписи, которые посетители увидят на сайте.
                     </p>
                   </div>
                 </div>
-                <label
-                  className={`flex h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_20px_rgba(255,255,255,.12)] ${galleryUploading ? "pointer-events-none opacity-60" : ""}`}
-                >
-                  {galleryUploading ? (
-                    <>
-                      <LoaderCircle className="h-4 w-4 animate-spin" /> Загрузка…
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4" /> Добавить фото
-                    </>
-                  )}
+
+                <div className="grid w-full gap-2 sm:w-[340px]">
                   <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    disabled={galleryUploading || galleryDeleting !== null}
-                    onChange={(event) => void addGalleryImage(event)}
-                    className="sr-only"
+                    type="text"
+                    maxLength={120}
+                    value={galleryCaptionDraft}
+                    disabled={galleryUploading}
+                    onChange={(event) => setGalleryCaptionDraft(event.target.value)}
+                    placeholder="Подпись новой фотографии"
+                    className="h-11 w-full rounded-xl border border-white/10 bg-white/[.04] px-4 text-xs outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:opacity-50"
                   />
-                </label>
+                  <label
+                    className={`flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 text-xs font-semibold text-black transition hover:shadow-[0_0_20px_rgba(255,255,255,.12)] ${galleryUploading ? "pointer-events-none opacity-60" : ""}`}
+                  >
+                    {galleryUploading ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" /> Загрузка…
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" /> Добавить фото
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      disabled={
+                        galleryUploading ||
+                        galleryDeleting !== null ||
+                        galleryCaptionSaving !== null
+                      }
+                      onChange={(event) => void addGalleryImage(event)}
+                      className="sr-only"
+                    />
+                  </label>
+                </div>
               </div>
 
               {galleryImages.length ? (
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  {galleryImages.map((image, index) => {
+                <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {galleryImages.map((image) => {
                     const isDeleting = galleryDeleting === image.id;
+                    const isSaving = galleryCaptionSaving === image.id;
+                    const captionValue = galleryCaptionEdits[image.id] ?? image.caption;
+                    const captionChanged = captionValue.trim() !== image.caption;
                     return (
                       <div
                         key={image.id}
@@ -1649,22 +1705,65 @@ function AdminPage({
                       >
                         <img
                           src={image.url}
-                          alt={`Фотография ${index + 1} в галерее`}
-                          className="aspect-square w-full rounded-xl bg-black object-cover"
+                          alt={image.caption || "Работа салона Лакки"}
+                          className="aspect-[4/3] w-full rounded-xl bg-black object-cover"
                         />
-                        <button
-                          type="button"
-                          disabled={galleryDeleting !== null || galleryUploading}
-                          onClick={() => void removeGalleryImage(image)}
-                          className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-red-300/20 text-xs text-red-200 transition hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
-                        >
-                          {isDeleting ? (
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                          {isDeleting ? "Удаление…" : "Удалить"}
-                        </button>
+                        <label className="mt-3 block">
+                          <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/35">
+                            Подпись на сайте
+                          </span>
+                          <input
+                            type="text"
+                            maxLength={120}
+                            value={captionValue}
+                            disabled={isDeleting || isSaving}
+                            onChange={(event) =>
+                              setGalleryCaptionEdits((captions) => ({
+                                ...captions,
+                                [image.id]: event.target.value,
+                              }))
+                            }
+                            placeholder="Например: Стрижка после ухода"
+                            className="h-10 w-full rounded-xl border border-white/10 bg-white/[.04] px-3 text-xs outline-none transition placeholder:text-white/20 focus:border-white/30 disabled:opacity-50"
+                          />
+                        </label>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            disabled={
+                              !captionChanged ||
+                              galleryDeleting !== null ||
+                              galleryUploading ||
+                              galleryCaptionSaving !== null
+                            }
+                            onClick={() => void saveGalleryCaption(image)}
+                            className="flex h-10 items-center justify-center gap-2 rounded-xl bg-white text-xs font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            {isSaving ? (
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Check className="h-4 w-4" />
+                            )}
+                            {isSaving ? "Сохранение…" : "Сохранить"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={
+                              galleryDeleting !== null ||
+                              galleryUploading ||
+                              galleryCaptionSaving !== null
+                            }
+                            onClick={() => void removeGalleryImage(image)}
+                            className="flex h-10 items-center justify-center gap-2 rounded-xl border border-red-300/20 text-xs text-red-200 transition hover:bg-red-400/10 disabled:cursor-wait disabled:opacity-50"
+                          >
+                            {isDeleting ? (
+                              <LoaderCircle className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            {isDeleting ? "Удаление…" : "Удалить"}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -1674,13 +1773,13 @@ function AdminPage({
                   <Images className="mx-auto h-8 w-8 text-white/35" />
                   <p className="mt-3 text-sm text-white/65">Пока нет добавленных фотографий</p>
                   <p className="mt-1 text-xs leading-5 text-white/35">
-                    Основной сайт пока показывает стандартные изображения. Добавьте первую фотографию кнопкой выше.
+                    Укажите подпись и добавьте первую фотографию кнопкой выше.
                   </p>
                 </div>
               )}
 
               <p className="mt-4 text-[11px] leading-5 text-white/35">
-                JPG, PNG и WebP до 8 МБ. Удаление убирает фотографию и из общего хранилища.
+                Подпись можно изменить в любое время. JPG, PNG и WebP до 8 МБ.
               </p>
             </Panel>
           </div>

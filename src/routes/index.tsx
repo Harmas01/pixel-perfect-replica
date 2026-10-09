@@ -511,14 +511,17 @@ function Why() {
 function Gallery() {
   const galleryImages = useGalleryImages();
   const photos = galleryImages.length
-    ? galleryImages.map((image, index) => ({
-        id: image.id,
-        src: image.url,
-        alt: "Фотография салона груминга «Лакки»",
-        label: `Фотография ${index + 1}`,
-        className: index === 0 ? "md:col-span-2 md:row-span-2" : "",
-        imageClassName: "object-cover",
-      }))
+    ? galleryImages.map((image, index) => {
+        const caption = image.caption.trim() || "Работа салона «Лакки»";
+        return {
+          id: image.id,
+          src: image.url,
+          alt: caption,
+          label: caption,
+          className: index === 0 ? "md:col-span-2 md:row-span-2" : "",
+          imageClassName: "object-cover",
+        };
+      })
     : [
         {
           id: "fallback-hero",
