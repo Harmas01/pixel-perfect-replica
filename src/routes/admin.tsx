@@ -776,6 +776,23 @@ function AdminPage({
     }
   };
 
+  const completeOrder = async (order: Order) => {
+    if (order.status === "done") {
+      toast("Заказ уже выполнен");
+      return;
+    }
+
+    try {
+      await updateOrderStatusRemote(order.id, "done", authSession.access_token);
+      setAppointments((items) =>
+        items.map((item) => (item.id === order.id ? { ...item, status: "done" } : item)),
+      );
+      toast.success(`${order.pet}: заказ выполнен`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Не удалось завершить заказ");
+    }
+  };
+
   const confirmAfterCall = async () => {
     if (!confirmingOrder || !callChecked) return;
     try {
@@ -1220,7 +1237,7 @@ function AdminPage({
                         <p className="truncate text-sm text-white/75">{item.service}</p>
                         <p className="mt-1 text-xs font-medium text-white/45">{orderMeta(item)}</p>
                       </div>
-                      <div className="flex items-center justify-between gap-2 sm:justify-end">
+                      <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
                         <button
                           onClick={() => changeStatus(item)}
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] transition hover:brightness-125 ${STATUS[item.status].className}`}
@@ -1236,6 +1253,16 @@ function AdminPage({
                           {item.status === "done" && <Check className="h-3 w-3" />}
                           {STATUS[item.status].label}
                         </button>
+                        {item.status !== "done" && (
+                          <button
+                            type="button"
+                            onClick={() => void completeOrder(item)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-300/[.08] px-2.5 py-1.5 text-[10px] text-emerald-200 transition hover:bg-emerald-300/[.15]"
+                            title="Отметить заказ как выполненный"
+                          >
+                            <CircleCheck className="h-3 w-3" /> Выполнено
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setDeletingOrder(item)}
