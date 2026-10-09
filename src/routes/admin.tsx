@@ -32,6 +32,7 @@ import {
   ORDERS_UPDATED_EVENT,
   isTimeSlotTaken,
   readOrders,
+  writeOrders,
   type Order,
   type OrderStatus,
 } from "@/lib/orders";
@@ -153,6 +154,7 @@ function AdminPage() {
   const [salonServices, setSalonServices] = useState<SalonService[]>(() => readSalonServices());
   const [workdayStatus, setWorkdayStatus] = useState(() => getWorkdayStatus());
   const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
   const [callChecked, setCallChecked] = useState(false);
   const [ordersReady, setOrdersReady] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
@@ -321,6 +323,19 @@ function AdminPage() {
     toast.success(`${confirmingOrder.pet}: запись подтверждена после звонка`);
     setConfirmingOrder(null);
     setCallChecked(false);
+  };
+
+  const deleteAppointment = () => {
+    if (!deletingOrder) return;
+    const nextAppointments = appointments.filter((item) => item.id !== deletingOrder.id);
+    setAppointments(nextAppointments);
+    writeOrders(nextAppointments);
+    if (confirmingOrder?.id === deletingOrder.id) {
+      setConfirmingOrder(null);
+      setCallChecked(false);
+    }
+    toast.success(`Запись для ${deletingOrder.pet} удалена`);
+    setDeletingOrder(null);
   };
 
   const addAppointment = (event: FormEvent<HTMLFormElement>) => {
@@ -643,10 +658,13 @@ function AdminPage() {
                           {STATUS[item.status].label}
                         </button>
                         <button
-                          className="grid h-8 w-8 place-items-center rounded-xl text-white/25 transition hover:bg-white/10 hover:text-white"
-                          aria-label={`Действия для ${item.pet}`}
+                          type="button"
+                          onClick={() => setDeletingOrder(item)}
+                          className="grid h-8 w-8 place-items-center rounded-xl text-red-200/45 transition hover:bg-red-300/10 hover:text-red-100"
+                          aria-label={`Удалить запись для ${item.pet}`}
+                          title="Удалить запись"
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </article>
@@ -1033,6 +1051,70 @@ function AdminPage() {
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-black transition disabled:cursor-not-allowed disabled:opacity-30"
               >
                 <CircleCheck className="h-4 w-4" /> Подтвердить запись
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deletingOrder && (
+        <div
+          className="fixed inset-0 z-[90] grid place-items-center bg-black/80 p-4 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-order-title"
+        >
+          <div className="w-full max-w-md rounded-[2rem] border border-red-300/20 bg-[#111] p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-[.22em] text-red-200/60">
+                  Удаление записи
+                </p>
+                <h2 id="delete-order-title" className="mt-1 font-display text-3xl font-semibold">
+                  Удалить безвозвратно?
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeletingOrder(null)}
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
+                aria-label="Закрыть"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/[.025] p-4 text-sm leading-6 text-white/70">
+              <p className="font-medium text-white">
+                {deletingOrder.pet} · {deletingOrder.owner}
+              </p>
+              <p className="mt-1 text-xs text-white/45">
+                {deletingOrder.date
+                  ? deletingOrder.date.split("-").reverse().join(".")
+                  : "Дата не указана"}
+                , {deletingOrder.time} · {deletingOrder.service}
+              </p>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-red-100/65">
+              Запись будет удалена из этого браузера. Отменить это действие после подтверждения
+              нельзя.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeletingOrder(null)}
+                className="flex-1 rounded-2xl border border-white/10 px-4 py-3 text-xs text-white/55 hover:bg-white/[.06]"
+              >
+                Оставить запись
+              </button>
+              <button
+                type="button"
+                onClick={deleteAppointment}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 text-xs font-semibold text-white transition hover:bg-red-400"
+              >
+                <Trash2 className="h-4 w-4" /> Удалить
               </button>
             </div>
           </div>
