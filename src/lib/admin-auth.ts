@@ -2,7 +2,8 @@ const SUPABASE_URL = "https://axtqkqicdcbmfobyvjhj.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_g_quHAMm9Utcz33BJEfmMg_YnQG1QJM";
 const ADMIN_EMAIL = "harmasbro@gmail.com";
 
-const SESSION_STORAGE_KEY = "lucky-admin-auth-session-v1";
+const SESSION_STORAGE_KEY = "lucky-admin-auth-session-v2";
+const LEGACY_SESSION_STORAGE_KEY = "lucky-admin-auth-session-v1";
 
 export type AdminAuthUser = {
   id: string;
@@ -53,6 +54,8 @@ async function readAuthResponse(response: Response) {
       "Password should be at least 6 characters": "Пароль должен содержать не менее 8 символов",
       "Signup requires a valid password": "Введите пароль не короче 8 символов",
       "Unable to validate email address: invalid format": "Проверьте правильность адреса почты",
+      "Token has expired or is invalid": "Код неверный или срок его действия истёк",
+      "Email rate limit exceeded": "Код уже отправлен. Подождите перед повторной отправкой",
     };
     throw new Error(translations[rawMessage] || rawMessage);
   }
@@ -78,6 +81,11 @@ function saveSession(session: AdminAuthSession) {
 
 function clearSession() {
   window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  window.sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
+}
+
+function clearLegacySession() {
+  window.sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
 }
 
 function readSession() {
@@ -130,27 +138,21 @@ async function refreshSession(session: AdminAuthSession) {
   return createSession(await readAuthResponse(response));
 }
 
-async function consumeEmailRedirect() {
-  const params = new URLSearchParams(window.location.hash.slice(1));
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  if (!accessToken || !refreshToken) return null;
-
-  const user = await fetchCurrentUser(accessToken);
-  const session: AdminAuthSession = {
-    access_token: accessToken,
-    refresh_token: refreshToken,
-    expires_at:
-      Math.floor(Date.now() / 1000) + Number(params.get("expires_in") || 3600),
-    user,
-  };
-  window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#appointments`);
-  return session;
+async function sendAdminLoginCode(email: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/otp`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      email: normalizeEmail(email),
+      create_user: false,
+    }),
+  });
+  await readAuthResponse(response);
 }
 
 export async function getAuthorizedSession() {
-  let session = await consumeEmailRedirect();
-  if (!session) session = readSession();
+  clearLegacySession();
+  let session = readSession();
   if (!session) return null;
 
   try {
@@ -168,12 +170,40 @@ export async function getAuthorizedSession() {
   }
 }
 
-export async function signInAdmin(email: string, password: string) {
+export async function startAdminSignIn(email: string, password: string) {
   ensureAllowedEmail(email);
   const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: authHeaders(),
     body: JSON.stringify({ email: normalizeEmail(email), password }),
+  });
+  const temporarySession = createSession(await readAuthResponse(response));
+  await verifyAllowlist(temporarySession);
+
+  await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+    method: "POST",
+    headers: authHeaders(temporarySession.access_token),
+  }).catch(() => undefined);
+
+  await sendAdminLoginCode(email);
+  return normalizeEmail(email);
+}
+
+export async function resendAdminLoginCode(email: string) {
+  ensureAllowedEmail(email);
+  await sendAdminLoginCode(email);
+}
+
+export async function verifyAdminLoginCode(email: string, token: string) {
+  ensureAllowedEmail(email);
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/verify`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify({
+      email: normalizeEmail(email),
+      token: token.trim(),
+      type: "email",
+    }),
   });
   const session = createSession(await readAuthResponse(response));
   await verifyAllowlist(session);

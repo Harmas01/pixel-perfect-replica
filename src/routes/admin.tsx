@@ -69,8 +69,10 @@ import {
 } from "@/lib/settings";
 import {
   getAuthorizedSession,
-  signInAdmin,
+  resendAdminLoginCode,
   signOutAdmin,
+  startAdminSignIn,
+  verifyAdminLoginCode,
   type AdminAuthSession,
 } from "@/lib/admin-auth";
 import {
@@ -232,11 +234,15 @@ function AdminLogin({
   onAuthenticated: (session: AdminAuthSession) => void;
   initialError?: string;
 }) {
+  const [stage, setStage] = useState<"credentials" | "code">("credentials");
   const [email, setEmail] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError);
+  const [resendAvailableAt, setResendAvailableAt] = useState(0);
   const [loginGuard, setLoginGuard] = useState<LoginGuardState>({
     failedAttempts: 0,
     lockedUntil: 0,
@@ -270,8 +276,9 @@ function AdminLogin({
   const remainingLabel = `${String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:${String(
     remainingSeconds % 60,
   ).padStart(2, "0")}`;
+  const resendSeconds = Math.max(0, Math.ceil((resendAvailableAt - now) / 1_000));
 
-  const submitAuth = async (event: FormEvent<HTMLFormElement>) => {
+  const submitCredentials = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const currentGuard = readLoginGuard();
     if (currentGuard.lockedUntil > Date.now()) {
@@ -284,10 +291,16 @@ function AdminLogin({
     setError("");
 
     try {
-      const session = await signInAdmin(email, password);
+      const normalizedEmail = await startAdminSignIn(email, password);
       clearLoginGuard();
       setLoginGuard({ failedAttempts: 0, lockedUntil: 0 });
-      onAuthenticated(session);
+      setVerifiedEmail(normalizedEmail);
+      setPassword("");
+      setCode("");
+      setResendAvailableAt(Date.now() + 60_000);
+      setNow(Date.now());
+      setStage("code");
+      toast.success("Код входа отправлен на почту");
     } catch (authError) {
       const message = authError instanceof Error ? authError.message : "Не удалось выполнить вход";
       const isInvalidCredentials =
@@ -323,6 +336,53 @@ function AdminLogin({
     }
   };
 
+  const submitCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code)) {
+      setError("Введите шестизначный код из письма");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+    try {
+      const session = await verifyAdminLoginCode(verifiedEmail, code);
+      onAuthenticated(session);
+    } catch (authError) {
+      setCode("");
+      setError(
+        authError instanceof Error ? authError.message : "Не удалось проверить код",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resendCode = async () => {
+    if (busy || resendSeconds > 0) return;
+    setBusy(true);
+    setError("");
+    try {
+      await resendAdminLoginCode(verifiedEmail);
+      setResendAvailableAt(Date.now() + 60_000);
+      setNow(Date.now());
+      toast.success("Новый код отправлен");
+    } catch (authError) {
+      setError(
+        authError instanceof Error ? authError.message : "Не удалось отправить новый код",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const returnToCredentials = () => {
+    setStage("credentials");
+    setVerifiedEmail("");
+    setCode("");
+    setError("");
+  };
+
   return (
     <div className="relative grid min-h-screen place-items-center overflow-hidden bg-[#080808] px-4 py-10 text-white">
       <div className="pointer-events-none absolute left-1/2 top-[-16rem] h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-white/[.055] blur-3xl" />
@@ -343,93 +403,160 @@ function AdminLogin({
 
         <div className="mt-8">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/[.07] text-white/70">
-            <KeyRound className="h-5 w-5" />
+            {stage === "credentials" ? (
+              <KeyRound className="h-5 w-5" />
+            ) : (
+              <Mail className="h-5 w-5" />
+            )}
           </div>
-          <h1 className="mt-5 font-display text-4xl font-semibold">Вход в панель</h1>
+          <h1 className="mt-5 font-display text-4xl font-semibold">
+            {stage === "credentials" ? "Вход в панель" : "Код из письма"}
+          </h1>
           <p className="mt-2 text-sm leading-6 text-white/40">
-            Введите почту администратора и пароль. После трёх неверных попыток вход
-            блокируется на 10 минут.
+            {stage === "credentials"
+              ? "Сначала введите почту администратора и пароль. После проверки мы отправим код на почту."
+              : `Введите шестизначный код, отправленный на ${verifiedEmail}.`}
           </p>
         </div>
 
-        <form onSubmit={submitAuth} className="mt-7 space-y-4">
-          <label className="block">
-            <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
-              Электронная почта
-            </span>
-            <span className="relative block">
-              <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-              <input
-                type="email"
-                required
-                disabled={isLocked}
-                autoComplete="username"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="name@example.com"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-4 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
-              />
-            </span>
-          </label>
+        {stage === "credentials" ? (
+          <form onSubmit={submitCredentials} className="mt-7 space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                Электронная почта
+              </span>
+              <span className="relative block">
+                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  type="email"
+                  required
+                  disabled={isLocked}
+                  autoComplete="username"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-4 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
+                />
+              </span>
+            </label>
 
-          <label className="block">
-            <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
-              Пароль
-            </span>
-            <span className="relative block">
-              <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={8}
-                disabled={isLocked}
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Введите пароль"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
-              />
-              <button
-                type="button"
-                disabled={isLocked}
-                onClick={() => setShowPassword((visible) => !visible)}
-                className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-white/35 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
-                aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                Пароль
+              </span>
+              <span className="relative block">
+                <KeyRound className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  disabled={isLocked}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Введите пароль"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[.04] pl-11 pr-12 text-sm outline-none transition placeholder:text-white/25 focus:border-white/30 disabled:cursor-not-allowed disabled:opacity-45"
+                />
+                <button
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  className="absolute right-3 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl text-white/35 transition hover:bg-white/10 hover:text-white disabled:pointer-events-none disabled:opacity-30"
+                  aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </span>
+            </label>
+
+            {isLocked ? (
+              <div
+                className="rounded-2xl border border-amber-300/20 bg-amber-400/[.08] px-4 py-3 text-xs leading-5 text-amber-100"
+                aria-live="polite"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </span>
-          </label>
+                Вход временно заблокирован. Попробуйте снова через{" "}
+                <span className="font-semibold tabular-nums">{remainingLabel}</span>.
+              </div>
+            ) : (
+              error && (
+                <div className="rounded-2xl border border-red-300/20 bg-red-400/[.08] px-4 py-3 text-xs leading-5 text-red-100">
+                  {error}
+                </div>
+              )
+            )}
 
-          {isLocked ? (
-            <div
-              className="rounded-2xl border border-amber-300/20 bg-amber-400/[.08] px-4 py-3 text-xs leading-5 text-amber-100"
-              aria-live="polite"
+            <button
+              type="submit"
+              disabled={busy || isLocked}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
             >
-              Вход временно заблокирован. Попробуйте снова через{" "}
-              <span className="font-semibold tabular-nums">{remainingLabel}</span>.
-            </div>
-          ) : (
-            error && (
+              {busy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <KeyRound className="h-4 w-4" />
+              )}
+              {isLocked ? `Заблокировано ${remainingLabel}` : "Продолжить"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={submitCode} className="mt-7 space-y-4">
+            <label className="block">
+              <span className="mb-2 block text-[10px] uppercase tracking-[.16em] text-white/40">
+                Код подтверждения
+              </span>
+              <input
+                type="text"
+                required
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder="000000"
+                className="h-14 w-full rounded-2xl border border-white/10 bg-white/[.04] px-4 text-center text-2xl font-semibold tracking-[.45em] outline-none transition placeholder:text-white/15 focus:border-white/30"
+              />
+            </label>
+
+            {error && (
               <div className="rounded-2xl border border-red-300/20 bg-red-400/[.08] px-4 py-3 text-xs leading-5 text-red-100">
                 {error}
               </div>
-            )
-          )}
-
-          <button
-            type="submit"
-            disabled={busy || isLocked}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
-          >
-            {busy ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <KeyRound className="h-4 w-4" />
             )}
-            {isLocked ? `Заблокировано ${remainingLabel}` : "Войти"}
-          </button>
-        </form>
+
+            <button
+              type="submit"
+              disabled={busy || code.length !== 6}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-semibold text-black transition hover:shadow-[0_0_28px_rgba(255,255,255,.15)] disabled:cursor-wait disabled:opacity-60"
+            >
+              {busy ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <CircleCheck className="h-4 w-4" />
+              )}
+              Подтвердить и войти
+            </button>
+
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <button
+                type="button"
+                onClick={returnToCredentials}
+                className="text-white/40 transition hover:text-white"
+              >
+                Изменить почту
+              </button>
+              <button
+                type="button"
+                disabled={busy || resendSeconds > 0}
+                onClick={resendCode}
+                className="text-white/55 transition hover:text-white disabled:cursor-not-allowed disabled:text-white/25"
+              >
+                {resendSeconds > 0 ? `Отправить снова через ${resendSeconds} сек.` : "Отправить код снова"}
+              </button>
+            </div>
+          </form>
+        )}
 
         <p className="mt-6 border-t border-white/10 pt-5 text-center text-[10px] leading-5 text-white/25">
           Регистрация через приложение отключена. Доступ разрешён только заранее созданной
