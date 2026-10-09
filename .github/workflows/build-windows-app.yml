@@ -1,0 +1,42 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "windows-app/**"
+      - ".github/workflows/build-windows-app.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build single-file Windows application
+        shell: pwsh
+        run: dotnet publish windows-app/LuckyAdmin.csproj --configuration Release --runtime win-x64 --self-contained true --output windows-publish
+
+      - name: Publish EXE to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-app-latest
+          target_commitish: ${{ github.sha }}
+          name: "Лакки — приложение администратора для Windows 11"
+          body: |
+            Запустите LuckyAdmin.exe. Приложение откроет защищённую админ-панель «Лакки»
+            в отдельном окне Microsoft Edge без обычных вкладок браузера.
+          files: windows-publish/LuckyAdmin.exe
+          fail_on_unmatched_files: true
+          make_latest: false
