@@ -1,6 +1,15 @@
-const CACHE_NAME = "lucky-orders-v1";
+const CACHE_NAME = "lucky-admin-v2";
+const APP_SHELL = ["admin", "manifest.webmanifest", "icon-192.png", "icon-512.png"].map(
+  (path) => new URL(path, self.registration.scope).toString(),
+);
 
-self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting()),
+  );
+});
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(

@@ -1,14 +1,17 @@
 {
-  "name": "Лакки — заказы",
-  "short_name": "Лакки",
-  "description": "Заказы и расписание салона груминга «Лакки»",
-  "start_url": "./admin",
+  "name": "Лакки — администратор",
+  "short_name": "Лакки Админ",
+  "description": "Записи, клиенты, услуги и расписание салона груминга «Лакки»",
+  "start_url": "./admin#appointments",
   "scope": "./",
   "display": "standalone",
   "background_color": "#090909",
   "theme_color": "#090909",
   "lang": "ru",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "./icon-192.png",
@@ -28,7 +31,20 @@
       "name": "Открыть заказы",
       "short_name": "Заказы",
       "url": "./admin#appointments",
-      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "./icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
-  ]
+  ],
+  "id": "./admin",
+  "display_override": [
+    "standalone"
+  ],
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "prefer_related_applications": false
 }
