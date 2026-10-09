@@ -558,14 +558,14 @@ function Reviews() {
   return (
     <section id="reviews" className="mx-auto max-w-7xl px-5 py-28 md:px-8">
       <SectionTitle eyebrow="тёплые слова" title="Отзывы наших клиентов" />
-      <div className="reveal mx-auto max-w-[800px] overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_24px_80px_rgba(255,255,255,.08)]">
+      <div className="reveal mx-auto max-w-[752px] overflow-hidden rounded-[1.5rem] border border-border bg-white shadow-[0_24px_80px_rgba(255,255,255,.08)]">
         <iframe
           id="yandex-reviews-widget"
           title="Свежие отзывы о салоне Лакки на Яндекс Картах"
           src={YANDEX_REVIEWS_WIDGET_URL}
           loading="lazy"
           scrolling="yes"
-          className={`block w-full border-0 bg-white transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
+          className={`block w-[calc(100%+48px)] max-w-none border-0 bg-white transition-[height] duration-700 ease-out ${showMore ? "h-[1180px]" : "h-[680px]"}`}
         />
       </div>
       <div className="mt-7 flex justify-center">
