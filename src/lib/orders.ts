@@ -1,6 +1,11 @@
 export type OrderStatus = "new" | "confirmed" | "progress" | "done";
 
 export const DEFAULT_SALON = "Лакки — Колпино, ул. Тазаева, 3";
+export const SALON_OPTIONS = [
+  DEFAULT_SALON,
+  "Лакки — Рыбацкий просп., 37, корп. 1, Санкт-Петербург",
+  "Лакки — Ростовская ул., 21, корп. 1, территория Славянка, посёлок Шушары",
+] as const;
 
 export type Order = {
   id: number;
@@ -171,14 +176,18 @@ export async function appendOrder(order: Order, accessToken?: string) {
   writeOrders(sortOrders([...localOrders.filter((item) => item.id !== order.id), order]));
 }
 
-export async function isTimeSlotTakenRemote(date: string, time: string) {
+export async function isTimeSlotTakenRemote(
+  date: string,
+  time: string,
+  salon = DEFAULT_SALON,
+) {
   try {
     const response = await fetch(
-      `${SUPABASE_URL}/rest/v1/rpc/is_appointment_slot_taken`,
+      `${SUPABASE_URL}/rest/v1/rpc/is_salon_appointment_slot_taken`,
       {
         method: "POST",
         headers: apiHeaders(),
-        body: JSON.stringify({ p_date: date, p_time: time }),
+        body: JSON.stringify({ p_date: date, p_time: time, p_salon: salon }),
       },
     );
     if (!response.ok) return false;
@@ -245,12 +254,19 @@ export async function syncLocalOrdersToRemote(accessToken: string) {
   }
 }
 
-export function isTimeSlotTaken(orders: Order[], date: string, time: string, excludeId?: number) {
+export function isTimeSlotTaken(
+  orders: Order[],
+  date: string,
+  time: string,
+  salon = DEFAULT_SALON,
+  excludeId?: number,
+) {
   return orders.some(
     (order) =>
       order.id !== excludeId &&
       order.date === date &&
       order.time === time &&
+      (order.salon || DEFAULT_SALON) === salon &&
       order.status !== "done",
   );
 }

@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
-import { appendOrder, DEFAULT_SALON, isTimeSlotTakenRemote } from "@/lib/orders";
+import {
+  appendOrder,
+  DEFAULT_SALON,
+  isTimeSlotTakenRemote,
+  SALON_OPTIONS,
+} from "@/lib/orders";
 import {
   DEFAULT_SALON_SERVICES,
   fetchSalonServices,
@@ -490,13 +495,14 @@ function About() {
 function Why() {
   const items = [
     ["500+", "Счастливых собак"],
+    ["3", "Точки в Санкт-Петербурге"],
     ["2", "Года профессиональной заботы"],
     ["∞", "Любви в каждой детали"],
   ];
   return (
     <section className="relative overflow-hidden border-y border-line py-24">
       <Paw className="absolute -right-10 -top-10 h-64 w-64 text-foreground/5" />
-      <div className="mx-auto grid max-w-5xl gap-10 px-5 sm:grid-cols-3 md:px-8">
+      <div className="mx-auto grid max-w-7xl gap-10 px-5 sm:grid-cols-2 lg:grid-cols-4 md:px-8">
         {items.map(([n, l], i) => (
           <div key={l} style={{ transitionDelay: `${i * 90}ms` }} className="reveal text-center">
             <div className="font-display text-7xl font-semibold text-glow md:text-8xl">{n}</div>
@@ -639,6 +645,7 @@ function Booking() {
     const data = new FormData(form);
     const date = String(data.get("date"));
     const time = String(data.get("time"));
+    const salon = String(data.get("salon") || DEFAULT_SALON);
 
     if (!bookingWindow || date < bookingWindow.min || date > bookingWindow.max) {
       toast.error(
@@ -656,8 +663,8 @@ function Booking() {
 
     setBookingSubmitting(true);
     try {
-      if (await isTimeSlotTakenRemote(date, time)) {
-        toast.error("Это время уже занято. Выберите другую дату или время.");
+      if (await isTimeSlotTakenRemote(date, time, salon)) {
+        toast.error("Это время уже занято в выбранном салоне. Выберите другую дату или время.");
         return;
       }
 
@@ -668,7 +675,7 @@ function Booking() {
         pet: String(data.get("pet")),
         breed: String(data.get("breed") || "Не указана"),
         service: String(data.get("service")),
-        salon: String(data.get("salon") || DEFAULT_SALON),
+        salon,
         date,
         time,
         note: String(data.get("note") || ""),
@@ -737,9 +744,11 @@ function Booking() {
           <label className="sm:col-span-2">
             <L>Выбор точки (салона)</L>
             <select name="salon" required className="field" defaultValue={DEFAULT_SALON}>
-              <option value={DEFAULT_SALON} className="bg-background">
-                {DEFAULT_SALON}
-              </option>
+              {SALON_OPTIONS.map((salon) => (
+                <option key={salon} value={salon} className="bg-background">
+                  {salon}
+                </option>
+              ))}
             </select>
           </label>
           <label className="sm:col-span-2">

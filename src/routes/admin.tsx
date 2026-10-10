@@ -41,6 +41,7 @@ import { Toaster } from "@/components/ui/sonner";
 import {
   ORDERS_STORAGE_KEY,
   DEFAULT_SALON,
+  SALON_OPTIONS,
   appendOrder,
   deleteOrderRemote,
   fetchOrders,
@@ -1049,6 +1050,7 @@ function AdminPage({
     const pet = String(data.get("pet") || "Новый питомец");
     const date = String(data.get("date") || "");
     const time = String(data.get("time") || "18:00");
+    const salon = String(data.get("salon") || DEFAULT_SALON);
     if (!bookingDateBounds || date < bookingDateBounds.min || date > bookingDateBounds.max) {
       toast.error(
         bookingDateBounds
@@ -1063,8 +1065,8 @@ function AdminPage({
     }
 
     try {
-      if (await isTimeSlotTakenRemote(date, time)) {
-        toast.error("Это время уже занято. Выберите другую дату или время.");
+      if (await isTimeSlotTakenRemote(date, time, salon)) {
+        toast.error("Это время уже занято в выбранном салоне. Выберите другую дату или время.");
         return;
       }
 
@@ -1075,7 +1077,7 @@ function AdminPage({
         pet,
         breed: String(data.get("breed") || "Порода не указана"),
         service: String(data.get("service") || "Комплексный груминг"),
-        salon: String(data.get("salon") || DEFAULT_SALON),
+        salon,
         price: Number(data.get("price")) || 3500,
         status: "new",
         phone: String(data.get("phone") || "Телефон не указан"),
@@ -1997,7 +1999,11 @@ function AdminPage({
                     className="field bg-[#111]"
                     defaultValue={DEFAULT_SALON}
                   >
-                    <option value={DEFAULT_SALON}>{DEFAULT_SALON}</option>
+                    {SALON_OPTIONS.map((salon) => (
+                      <option key={salon} value={salon}>
+                        {salon}
+                      </option>
+                    ))}
                   </select>
                 </AdminField>
               </div>
