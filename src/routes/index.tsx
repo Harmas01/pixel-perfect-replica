@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import {
@@ -613,6 +613,117 @@ function Reviews() {
   );
 }
 
+function SalonPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (salon: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!pickerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div ref={pickerRef} className="relative">
+      <input type="hidden" name="salon" value={value} />
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`group flex min-h-[64px] w-full items-center justify-between gap-4 rounded-2xl border px-4 py-3.5 text-left transition duration-300 ${open ? "border-foreground bg-white/[.07] shadow-glow" : "border-input bg-white/[.025] hover:border-white/45 hover:bg-white/[.05]"}`}
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[.06] text-[10px] tracking-[.16em] text-white/60">
+            {String(SALON_OPTIONS.indexOf(value as (typeof SALON_OPTIONS)[number]) + 1).padStart(2, "0")}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[10px] uppercase tracking-[.2em] text-muted-foreground">
+              Выбранная точка
+            </span>
+            <span className="mt-1 block text-sm leading-5 text-foreground">
+              {value.replace("Лакки — ", "")}
+            </span>
+          </span>
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          className={`h-5 w-5 shrink-0 text-white/55 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label="Выберите салон"
+          className="absolute inset-x-0 top-[calc(100%+.65rem)] z-40 max-h-[330px] overflow-y-auto rounded-2xl border border-white/20 bg-[#0b0b0b]/98 p-2 shadow-[0_24px_80px_rgba(0,0,0,.75)] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
+        >
+          {SALON_OPTIONS.map((salon, index) => {
+            const selected = salon === value;
+            return (
+              <button
+                key={salon}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(salon);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left transition ${selected ? "bg-white text-black" : "text-white hover:bg-white/[.08]"}`}
+              >
+                <span
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border text-[10px] tracking-[.16em] ${selected ? "border-black/15 bg-black/[.06]" : "border-white/15 bg-white/[.04] text-white/50"}`}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-[10px] uppercase tracking-[.18em] ${selected ? "text-black/50" : "text-white/35"}`}>
+                    Салон «Лакки»
+                  </span>
+                  <span className="mt-1 block text-sm leading-5">
+                    {salon.replace("Лакки — ", "")}
+                  </span>
+                </span>
+                <span
+                  className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border text-xs ${selected ? "border-black bg-black text-white" : "border-white/15 text-transparent"}`}
+                  aria-hidden
+                >
+                  ✓
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Booking() {
   const availableServices = useSalonServices();
   const [bookingWindow, setBookingWindow] = useState<{
@@ -621,6 +732,7 @@ function Booking() {
     max: string;
   } | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [selectedSalon, setSelectedSalon] = useState(DEFAULT_SALON);
 
   useEffect(() => {
     const refreshBookingWindow = () => {
@@ -686,6 +798,7 @@ function Booking() {
       });
       toast.success("Заявка принята. Администратор получит уведомление и позвонит вам.");
       form.reset();
+      setSelectedSalon(DEFAULT_SALON);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Не удалось отправить заявку");
     } finally {
@@ -741,16 +854,10 @@ function Booking() {
             <L>Порода</L>
             <input name="breed" className="field" placeholder="Французский бульдог" />
           </label>
-          <label className="sm:col-span-2">
+          <div className="sm:col-span-2">
             <L>Выбор точки (салона)</L>
-            <select name="salon" required className="field" defaultValue={DEFAULT_SALON}>
-              {SALON_OPTIONS.map((salon) => (
-                <option key={salon} value={salon} className="bg-background">
-                  {salon}
-                </option>
-              ))}
-            </select>
-          </label>
+            <SalonPicker value={selectedSalon} onChange={setSelectedSalon} />
+          </div>
           <label className="sm:col-span-2">
             <L>Услуга</L>
             <select name="service" required className="field" defaultValue="">
