@@ -924,7 +924,7 @@ function Booking() {
 function Contacts() {
   const rows = [
     ["VK", "vk.ru/lakki_grooming"],
-    ["Адрес", "ул. Тазаева, 3, Колпино"],
+    ["Адреса", "3 салона в Санкт-Петербурге"],
     ["Часы работы", "Ежедневно 10:00 – 20:00"],
   ];
   return (
@@ -962,14 +962,14 @@ function Contacts() {
         </div>
         <div className="reveal relative min-h-[420px] overflow-hidden rounded-[1.5rem] border border-border">
           <iframe
-            title="Лакки на Яндекс Картах"
+            title="Три салона Лакки на Яндекс Картах"
             className="absolute inset-0 h-full w-full grayscale invert-[.9] contrast-125"
             loading="lazy"
             allowFullScreen
-            src="https://yandex.ru/map-widget/v1/?ll=30.608306%2C59.741463&z=17&pt=30.608306%2C59.741463%2Cpm2rdl"
+            src="https://yandex.ru/map-widget/v1/?ll=30.542958%2C59.790390&z=12&pt=30.608306%2C59.741463%2Cpm2rdl~30.509096%2C59.839316%2Cpm2rdl~30.477609%2C59.743236%2Cpm2rdl"
           />
           <a
-            href="https://yandex.ru/maps/?ll=30.608306%2C59.741463&z=17&pt=30.608306%2C59.741463%2Cpm2rdl"
+            href="https://yandex.ru/maps/?ll=30.542958%2C59.790390&z=12&pt=30.608306%2C59.741463%2Cpm2rdl~30.509096%2C59.839316%2Cpm2rdl~30.477609%2C59.743236%2Cpm2rdl"
             target="_blank"
             rel="noreferrer"
             className="absolute bottom-4 left-4 rounded-full border border-foreground bg-background/90 px-5 py-3 text-xs uppercase tracking-[0.18em] shadow-glow backdrop-blur-md"
@@ -1014,7 +1014,7 @@ function Footer() {
           >
             VK · lakki_grooming ↗
           </a>
-          <p>ул. Тазаева, 3, Колпино</p>
+          <p>3 салона в Санкт-Петербурге</p>
           <p className="mt-4 text-xs">© {new Date().getFullYear()} Лакки · салон груминга</p>
         </div>
       </div>
