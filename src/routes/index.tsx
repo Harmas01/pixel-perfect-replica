@@ -923,8 +923,7 @@ function Booking() {
 
 function Contacts() {
   const rows = [
-    ["Телефон", "+7 (900) 123-45-67"],
-    ["WhatsApp / Telegram", "@lucky_grooming"],
+    ["VK", "vk.ru/lakki_grooming"],
     ["Адрес", "ул. Тазаева, 3, Колпино"],
     ["Часы работы", "Ежедневно 10:00 – 20:00"],
   ];
@@ -936,15 +935,29 @@ function Contacts() {
           {rows.map(([k, v]) => (
             <div key={k} className="flex flex-col gap-1 py-5 sm:flex-row sm:justify-between">
               <span className="text-xs uppercase tracking-[0.25em] text-muted-foreground">{k}</span>
-              <span className="font-display text-2xl">{v}</span>
+              {k === "VK" ? (
+                <a
+                  href="https://vk.ru/lakki_grooming"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-display text-2xl transition hover:text-glow"
+                >
+                  {v} ↗
+                </a>
+              ) : (
+                <span className="font-display text-2xl">{v}</span>
+              )}
             </div>
           ))}
           <div className="flex gap-3 pt-6">
-            {["Instagram", "Telegram", "VK"].map((s) => (
-              <a key={s} href="#" className="btn-outline !px-5 !py-2 !text-[10px]">
-                {s}
-              </a>
-            ))}
+            <a
+              href="https://vk.ru/lakki_grooming"
+              target="_blank"
+              rel="noreferrer"
+              className="btn-outline !px-5 !py-2 !text-[10px]"
+            >
+              VK ↗
+            </a>
           </div>
         </div>
         <div className="reveal relative min-h-[420px] overflow-hidden rounded-[1.5rem] border border-border">
@@ -993,7 +1006,14 @@ function Footer() {
           ))}
         </nav>
         <div className="text-sm text-muted-foreground md:text-right">
-          <p>+7 (900) 123-45-67</p>
+          <a
+            href="https://vk.ru/lakki_grooming"
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-foreground"
+          >
+            VK · lakki_grooming ↗
+          </a>
           <p>ул. Тазаева, 3, Колпино</p>
           <p className="mt-4 text-xs">© {new Date().getFullYear()} Лакки · салон груминга</p>
         </div>
