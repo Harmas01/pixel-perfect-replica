@@ -115,9 +115,24 @@ function fromRow(row: AppointmentRow): Order {
 async function requireSuccessful(response: Response, fallbackMessage: string) {
   if (response.ok) return;
   const payload = (await response.json().catch(() => null)) as
-    | { message?: string; error?: string; code?: string }
+    | { message?: string; error?: string; code?: string; details?: string; hint?: string }
     | null;
   if (payload?.code === "23505") {
+    const conflictDetails = [
+      payload.message,
+      payload.error,
+      payload.details,
+      payload.hint,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (conflictDetails.includes("appointments_active_phone_key")) {
+      throw new Error(
+        "На этот номер уже есть активная запись. Новую заявку можно оформить после выполнения или удаления текущей.",
+      );
+    }
+
     throw new Error("Это время уже занято. Выберите другую дату или время.");
   }
   throw new Error(payload?.message || payload?.error || fallbackMessage);
